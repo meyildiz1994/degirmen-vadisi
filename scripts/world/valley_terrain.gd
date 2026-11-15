@@ -33,7 +33,7 @@ func _ground_color(x: float, z: float, h: float, n: Vector3) -> Color:
 	# Dik yamaçlar: toprak ve taş
 	var steep := 1.0 - n.y
 	c = c.lerp(Palette.EARTH, smoothstep(0.18, 0.35, steep))
-	c = c.lerp(Palette.STONE_DARK.lerp(Palette.LAVENDER, 0.3), smoothstep(0.38, 0.6, steep))
+	c = c.lerp(Palette.STONE_DARK.lerp(Palette.EARTH, 0.25), smoothstep(0.38, 0.6, steep))
 	# Dere kıyısı: kum ve ıslak toprak
 	var dr := ValleyShape.distance_to_river(x, z) - ValleyShape.river_half_width(z)
 	c = c.lerp(Palette.SAND, 1.0 - smoothstep(0.2, 1.6, dr))

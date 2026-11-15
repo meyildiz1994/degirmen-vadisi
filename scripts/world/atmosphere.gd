@@ -63,7 +63,7 @@ func _build_environment() -> void:
 	environment.sky = sky
 	# Gölgeler siyah değil lavanta: ortam ışığı sabit lavanta rengi
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color(0.68, 0.64, 0.92)
+	environment.ambient_light_color = Color(0.70, 0.72, 0.86)
 	environment.ambient_light_energy = 0.9
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
 	environment.tonemap_mode = Environment.TONE_MAPPER_LINEAR
@@ -90,7 +90,7 @@ func _build_distant_hills() -> void:
 	var kit := MeshKit.new()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 99
-	var colors := [Palette.MOSS_LIGHT, Palette.LAVENDER, Palette.MOSS, Palette.SKY.lerp(Palette.LAVENDER, 0.5)]
+	var colors := [Palette.MOSS_LIGHT, Palette.SKY.lerp(Palette.MOSS, 0.4), Palette.MOSS, Palette.SKY.lerp(Palette.LAVENDER, 0.3)]
 	for ring in 2:
 		var count := 14 + ring * 6
 		var dist := 48.0 + ring * 28.0
@@ -101,7 +101,7 @@ func _build_distant_hills() -> void:
 			var sq := Vector3(1.0, rng.randf_range(0.55, 0.85), 1.0)
 			var c: Color = colors[(i + ring) % colors.size()]
 			if ring == 1:
-				c = c.lerp(Palette.LAVENDER, 0.5).lerp(Palette.PAPER, 0.3)
+				c = c.lerp(Palette.SKY, 0.45).lerp(Palette.PAPER, 0.3)
 			kit.sphere(pos, r, c, sq, 14)
 	var mi := MeshInstance3D.new()
 	mi.name = "DistantHills"

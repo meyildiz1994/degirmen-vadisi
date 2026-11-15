@@ -3,7 +3,7 @@
 // Gölge tarafı siyah değil: Environment'taki lavanta ortam ışığı görünür.
 
 uniform vec3 light_tint : source_color = vec3(1.0, 0.96, 0.86);
-uniform vec3 mid_tint : source_color = vec3(1.0, 0.74, 0.66);
+uniform vec3 mid_tint : source_color = vec3(1.0, 0.80, 0.66);
 uniform float band_low = 0.06;
 uniform float band_high = 0.50;
 uniform float band_softness = 0.045;

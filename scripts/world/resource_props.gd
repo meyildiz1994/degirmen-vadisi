@@ -117,5 +117,5 @@ func _build_waterfall_rocks() -> void:
 		var hw := ValleyShape.river_half_width(z)
 		var x := ValleyShape.river_x(z) + side * (hw + _rng.randf_range(-0.2, 0.9))
 		var y := ValleyShape.height(x, z)
-		var mesh := MeshKit.rock_mesh(0.9, 500 + i, Palette.STONE.lerp(Palette.LAVENDER, 0.25))
+		var mesh := MeshKit.rock_mesh(0.9, 500 + i, Palette.STONE.lerp(Palette.STONE_DARK, 0.2))
 		_place(mesh, Vector3(x, y, z), _rng.randf() * TAU, _rng.randf_range(0.8, 1.6))
