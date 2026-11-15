@@ -67,15 +67,18 @@ func _needed() -> Dictionary:
 	return total
 
 
-## Atölyede nabız gibi atacak kalıp (eğitim).
+## Atölyede nabız gibi atacak kalıp (eğitim). Köprü adımında eksik kiriş/bağlantı kalıbı.
 func _mold_to_highlight() -> String:
+	var inv := GameState.inventory
+	if GameState.tutorial_step == Step.BRIDGE and bridge != null:
+		for mold_id: String in ["beam", "connector"]:
+			var missing := Repair.slot_total(bridge.site_id, mold_id) - Repair.filled_count(bridge.state, bridge.site_id, mold_id)
+			if missing > _parts_of(mold_id):
+				return mold_id
+		return ""
 	if GameState.tutorial_step != Step.CRAFT:
 		return ""
-	var inv := GameState.inventory
-	var handles := 0
-	for key: String in inv.parts:
-		if Crafting.part_mold(key) == "handle":
-			handles += inv.part_count(key)
+	var handles := _parts_of("handle")
 	var heads_left := int(not inv.has_tool("axe")) + int(not inv.has_tool("pickaxe"))
 	if handles < heads_left and handles == 0:
 		return "handle"
@@ -84,6 +87,14 @@ func _mold_to_highlight() -> String:
 	if not inv.has_tool("pickaxe"):
 		return "pickaxe_head"
 	return ""
+
+
+func _parts_of(mold_id: String) -> int:
+	var n := 0
+	for key: String in GameState.inventory.parts:
+		if Crafting.part_mold(key) == mold_id:
+			n += GameState.inventory.part_count(key)
+	return n
 
 
 func _set_step(s: int) -> void:
@@ -121,6 +132,8 @@ func _refresh() -> void:
 	_advance_if_ready()
 	if hud.workshop_panel:
 		hud.workshop_panel.set_highlight(_mold_to_highlight())
+	if hud.repair_panel:
+		hud.repair_panel.guide_enabled = GameState.tutorial_step == Step.BRIDGE
 	var card: IconHintCard = hud.hint_card
 	match GameState.tutorial_step:
 		Step.MOVE:

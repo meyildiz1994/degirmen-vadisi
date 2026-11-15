@@ -25,6 +25,8 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	if GameState.is_mobile or (DisplayServer.is_touchscreen_available() and OS.has_feature("web")):
 		device = Device.TOUCH
+	else:
+		CursorArt.apply()
 
 
 func is_touch() -> bool:
@@ -97,6 +99,21 @@ func release_mouse() -> void:
 
 
 # --- Oyun mantığına açılan arayüz -----------------------------------------------
+## Fareyle oynarken (fare oyunda yakalıyken) sol tık = etkileşim. Dokunmatikten türetilen
+## fare olayları ve dokunmatik önizleme sayılmaz, böylece telefonda her dokunuş etkileşim olmaz.
+func is_aiming() -> bool:
+	return device == Device.KEYBOARD_MOUSE and not touch_preview and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+
+
+func is_click_interact(event: InputEvent) -> bool:
+	return event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT \
+		and event.device != InputEvent.DEVICE_ID_EMULATION and is_aiming()
+
+
+## Etkileşim basılı mı (E / A / dokunmatik buton ya da nişan alırken sol tık).
+func is_interact_held() -> bool:
+	return Input.is_action_pressed("interact") or (is_aiming() and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT))
+
 ## -1..1 hareket vektörü (x: sağ, y: geri). Klavye, sol çubuk ve sanal joystick birleşik.
 func get_move_vector() -> Vector2:
 	return Input.get_vector("move_left", "move_right", "move_forward", "move_back")
@@ -157,3 +174,8 @@ func glyph_for(action: String) -> String:
 			return ""
 		_:
 			return {"interact": "E", "inventory": "Tab", "pause": "Esc", "quest_log": "J"}.get(action, "?")
+
+
+## Klavye/farede etkileşim ipucuna fare ikonu da eklensin mi (sol tık da çalışır).
+func shows_mouse_hint(action: String) -> bool:
+	return action == "interact" and device == Device.KEYBOARD_MOUSE and not touch_preview

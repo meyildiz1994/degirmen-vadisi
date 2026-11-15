@@ -6,6 +6,9 @@ extends Control
 signal closed
 
 var is_open := false
+## Eğitimde açık: işaretçi sıradaki adımı (kalıp → yuva → malzeme → düğme) gösterir.
+var guide_enabled := false
+var guide: GuidePointer
 var _card: WatercolorPanel
 var _title: Label
 var _panel_tween: Tween
@@ -35,7 +38,20 @@ func _build_card(title_key: String, blob_seed: float) -> VBoxContainer:
 	_card.add_child(root)
 	root.add_child(_header(title_key))
 	root.add_child(_rule())
+	guide = GuidePointer.new()
+	guide.name = "Guide"
+	add_child(guide)
 	return root
+
+
+## Alt sınıf: yol göstericinin şu an işaret etmesi gereken kontrol (yoksa null).
+func _guide_target() -> Control:
+	return null
+
+
+func _process(_delta: float) -> void:
+	if guide != null:
+		guide.target = _guide_target() if is_open and guide_enabled else null
 
 
 func _header(title_key: String) -> Control:

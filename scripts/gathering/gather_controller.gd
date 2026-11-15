@@ -99,7 +99,7 @@ func _physics_process(delta: float) -> void:
 		return
 	player.face_towards(target.global_position)
 	cycle += delta
-	var holding := Input.is_action_pressed("interact")
+	var holding := InputManager.is_interact_held()
 	if GameState.rhythm_hits:
 		# Basılı tutan oyuncu da ilerler (normal vuruş), sadece tatlı vuruşu kaçırır.
 		if holding and _was_holding and cycle >= swing + SWEET_LATE:
@@ -121,7 +121,7 @@ func _hit(sweet: bool) -> void:
 	if target == null or tool == null:
 		return
 	cycle = 0.0
-	_was_holding = Input.is_action_pressed("interact")
+	_was_holding = InputManager.is_interact_held()
 	var amount := 1.0 / float(tool.hits_for(target.resource_id))
 	if sweet:
 		amount *= Materials.tune("sweet_progress", 2.0)

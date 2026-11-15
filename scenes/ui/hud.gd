@@ -33,6 +33,7 @@ var hint_card: IconHintCard
 var inventory_panel: InventoryPanel
 var workshop_panel: WorkshopPanel
 var repair_panel: RepairPanel
+var aim_reticle: AimReticle
 
 
 func _ready() -> void:
@@ -74,6 +75,10 @@ func bind_player(p: Player) -> void:
 
 ## Toplama arayüzü kodla kurulur: vuruş halkası, toplama kartları, metinsiz ipucu, heybe.
 func _build_gather_ui() -> void:
+	aim_reticle = AimReticle.new()
+	aim_reticle.name = "AimReticle"
+	aim_reticle.visible = false
+	root.add_child(aim_reticle)
 	rhythm_ring = RhythmRing.new()
 	rhythm_ring.name = "RhythmRing"
 	add_child(rhythm_ring)
@@ -282,6 +287,9 @@ func _process(_delta: float) -> void:
 	look_hint.visible = InputManager.device == InputManager.Device.KEYBOARD_MOUSE \
 		and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not get_tree().paused \
 		and not modal_open() and not inventory_panel.is_open
+	aim_reticle.visible = InputManager.is_aiming() and not get_tree().paused and not modal_open() \
+		and not inventory_panel.is_open and not (player != null and player.gather.active())
+	aim_reticle.has_target = _focus != null
 	if debug_label.visible:
 		debug_label.text = "FPS %d  |  draw %d  |  %s  |  %s" % [
 			Engine.get_frames_per_second(),

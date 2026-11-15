@@ -21,7 +21,7 @@ Tek harici varlık: OFL lisanslı **Patrick Hand** fontu (`fonts/`).
 | Suluboya nesne shader'ı + kenar çizgisi | `shaders/watercolor_object.gdshader`, `watercolor_outline.gdshader`, `watercolor_common.gdshaderinc` |
 | Ekran efekti (kâğıt, taşma, kenar beyazlatma, Kuwahara) | `shaders/watercolor_screen.gdshader`, `scenes/ui/screen_effect.tscn` |
 | Materyal kütüphanesi + palet | `scripts/render/watercolor_materials.gd`, `palette.gd`, `mesh_kit.gd` |
-| Giriş (klavye/gamepad/dokunmatik) | `scripts/input_manager.gd`, `scenes/ui/touch_controls.tscn` |
+| Giriş (klavye/gamepad/dokunmatik) | `scripts/input_manager.gd`, `scenes/ui/touch_controls.tscn`, oyun imleci `scripts/ui/cursor_art.gd`, nişangâh `aim_reticle.gd` |
 | Arayüz (görev, ipucu, duraklat menüsü) | `scenes/ui/hud.tscn`, `scenes/ui/watercolor_theme.tres` |
 | Autoload'lar | `autoload/game_state.gd`, `save_system.gd`, `platform_services.gd`, `audio_manager.gd` |
 | Ses bus'ları | `audio/default_bus_layout.tres` (Music, SFX, Ambience, UI) |
@@ -101,7 +101,7 @@ Oyunda **F5** (veya gamepad LB) ya da duraklat menüsündeki "Grafik" butonu kal
 |---|---|---|---|
 | move | WASD / oklar | Sol çubuk | Sol yarıda sanal joystick |
 | look | Fare (oyun alanına tıkla) | Sağ çubuk | Sağ yarıda sürükle |
-| interact (topla / kes / kır / dik / onar) | E | A | Sağ alttaki "Etkileşim" |
+| interact (topla / kes / kır / dik / onar) | E veya sol tık (nişangâhtaki hedef) | A | Sağ alttaki "Etkileşim" |
 | inventory | Tab / I | Y | Üstteki "Heybe" |
 | pause | Esc | Start | Üstteki ‖ butonu |
 | quest_log (görev kartı) | J veya sağ üstteki ikon | D-pad yukarı | Sağ üstteki görev ikonu |

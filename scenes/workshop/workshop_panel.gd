@@ -224,6 +224,7 @@ func _build_slots() -> void:
 		vb.add_child(l)
 		b.add_child(vb)
 		_slot_row.add_child(b)
+		b.set_meta("slot", i)
 
 
 func _build_options() -> void:
@@ -260,6 +261,7 @@ func _build_options() -> void:
 		ic.size = Vector2(48, 48)
 		b.add_child(ic)
 		_option_grid.add_child(b)
+		b.set_meta("option", o)
 
 
 func _build_stats() -> void:
@@ -305,6 +307,7 @@ func _on_craft() -> void:
 
 
 func _process(delta: float) -> void:
+	super._process(delta)
 	if not is_open or highlight_mold == "" or not _mold_buttons.has(highlight_mold):
 		return
 	_pulse += delta * 4.0
@@ -317,6 +320,31 @@ func _process(delta: float) -> void:
 
 func set_highlight(id: String) -> void:
 	highlight_mold = id
+	guide_enabled = id != ""
 	if id == "":
 		for k in _mold_buttons:
 			(_mold_buttons[k] as Button).modulate = Color.WHITE
+
+
+## Eğitim sırası: vurgulu kalıp → boş yuva → elde olan ilk malzeme → Üret.
+func _guide_target() -> Control:
+	if highlight_mold != "" and mold_id != highlight_mold:
+		return _mold_buttons.get(highlight_mold)
+	if Crafting.can_craft(GameState.inventory, mold_id, choices):
+		return _craft_button
+	var empty := _first_empty_slot()
+	if str(choices[empty]) != "":
+		return null
+	if active_slot != empty:
+		return _live_child(_slot_row, "slot", empty)
+	for c in _option_grid.get_children():
+		if c is Button and not c.is_queued_for_deletion() and not (c as Button).disabled:
+			return c
+	return null
+
+
+func _live_child(parent: Node, meta: String, value) -> Control:
+	for c in parent.get_children():
+		if not c.is_queued_for_deletion() and c.has_meta(meta) and c.get_meta(meta) == value:
+			return c
+	return null

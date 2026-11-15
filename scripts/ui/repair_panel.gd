@@ -273,3 +273,14 @@ func _on_install() -> void:
 		get_tree().create_timer(0.6).timeout.connect(close_panel)
 		return
 	select_slot(_first_open_slot())
+
+
+## Eğitim sırası: boş yer → parça → Yerleştir. Parça yoksa kapat (atölyeye git).
+func _guide_target() -> Control:
+	if site == null or site.is_complete():
+		return null
+	if Repair.is_filled(site.state, slot_id):
+		return _slot_buttons.get(_first_open_slot())
+	if choice != "":
+		return _install_button
+	return null

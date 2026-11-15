@@ -104,6 +104,13 @@ func _run() -> void:
 	world.workshop.interactable.interact(player)
 	var wp: WorkshopPanel = world.hud.workshop_panel
 	check(wp.is_open and wp.highlight_mold == "handle", "atölye paneli açıldı, Sap kalıbı vurgulu")
+	await _frames(2)
+	var gt: Control = wp._guide_target()
+	check(wp.guide_enabled and gt != null and gt == wp._craft_button, "yol gösterici Üret'i gösteriyor (dal kendiliğinden kondu)")
+	wp.select_mold("beam")
+	await _frames(2)
+	check(wp._guide_target() == wp._mold_buttons["handle"], "başka kalıba geçince vurgulu kalıbı gösteriyor")
+	wp.select_mold("handle")
 	check(not Crafting.craft(gs.inventory, "axe_head", ["stone", ""]).size(), "eksik yuvayla üretilmez")
 	check(Crafting.craft(gs.inventory, "handle", ["branch"]).get("key", "") == "handle:branch", "dal sap yapıldı")
 	check(Crafting.craft(gs.inventory, "handle", ["branch"]).size() > 0, "ikinci sap")

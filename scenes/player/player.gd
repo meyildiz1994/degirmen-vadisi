@@ -103,7 +103,8 @@ func _animate(delta: float) -> void:
 	model.rotation.z = sin(_walk_phase) * 0.04 * clampf(speed / walk_speed, 0.0, 1.0)
 
 
-## Menzildeki en yakın etkileşim noktasını otomatik hedefle.
+## Menzildeki en yakın etkileşim noktasını otomatik hedefle. Fareyle nişan alırken
+## ekranın ortasındaki imlece en yakın açıdaki hedef öncelikli (yoksa yine en yakını).
 func _update_focus() -> void:
 	var best: Interactable = null
 	var best_d := INF
@@ -121,15 +122,38 @@ func _update_focus() -> void:
 		if d < it.radius and d + it.focus_bias < best_d:
 			best = it
 			best_d = d + it.focus_bias
+	if InputManager.is_aiming():
+		var aimed := _aimed_target()
+		if aimed != null:
+			best = aimed
 	if best != focus:
 		focus = best
 		focus_changed.emit(focus)
 
 
+const AIM_MAX_ANGLE := 0.32   ## radyan; imlecin bu kadar yakınındaki hedef seçilir
+
+
+func _aimed_target() -> Interactable:
+	var origin := camera.global_position
+	var fwd := -camera.global_basis.z
+	var best: Interactable = null
+	var best_a := AIM_MAX_ANGLE
+	for node in get_tree().get_nodes_in_group(Interactable.GROUP):
+		var it := node as Interactable
+		if not it.can_focus() or it.global_position.distance_to(global_position) >= it.radius:
+			continue
+		var a := fwd.angle_to(it.global_position + Vector3(0, 0.4, 0) - origin)
+		if a < best_a:
+			best = it
+			best_a = a
+	return best
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not input_enabled:
 		return
-	if not event.is_action_pressed("interact"):
+	if not event.is_action_pressed("interact") and not InputManager.is_click_interact(event):
 		return
 	if gather.active():
 		gather.on_interact_pressed(gather.target)
