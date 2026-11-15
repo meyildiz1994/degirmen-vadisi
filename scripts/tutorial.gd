@@ -5,13 +5,18 @@ extends Node
 ##   0: yürü  →  1: etrafına bak  →  2: dal ve küçük taş topla
 ##   3: atölyede ilk taş balta + taş kazma  →  4: bir ağaç kes, bir kaya kır
 ##   5: köprüyü onar (2 kiriş + 1 bağlantı)  →  6: karşı kıyıda demir kaz
-##   7: demirden balta/kazma yap  →  8: eski değirmeni incele  →  9: (Aşama 5) değirmen
+##   7: demirden balta/kazma yap  →  8: eski değirmeni incele  →  9: duvarı ör (3 Duvar Taşı)
+##   10: çarkı onar (aks + dişli + 6 kanat)  →  11: final, serbest oyun
 ## Görev kartında kısa metin de var; ipucu kartı tamamen ikon ve sayı.
 
-enum Step { MOVE, LOOK, GATHER, CRAFT, USE, BRIDGE, IRON, IRON_TOOL, MILL, DONE }
+enum Step { MOVE, LOOK, GATHER, CRAFT, USE, BRIDGE, IRON, IRON_TOOL, MILL, MILL_WALL, MILL_WHEEL, DONE }
 
 const QUESTS := ["QUEST_WELCOME", "QUEST_WELCOME", "QUEST_FIRST_GATHER", "QUEST_FIRST_TOOLS", "QUEST_USE_TOOLS",
-	"QUEST_REPAIR_BRIDGE", "QUEST_REACH_IRON", "QUEST_IRON_TOOLS", "QUEST_VISIT_MILL", "QUEST_MILL_NEXT"]
+	"QUEST_REPAIR_BRIDGE", "QUEST_REACH_IRON", "QUEST_IRON_TOOLS", "QUEST_VISIT_MILL", "QUEST_REPAIR_WALL",
+	"QUEST_REPAIR_WHEEL", "QUEST_VALLEY_DONE"]
+## Onarım adımları: hangi yer, hangi kalıplar (atölyede sırayla vurgulanır).
+const WALL_MOLDS := ["block"]
+const WHEEL_MOLDS := ["axle", "gear", "paddle"]
 ## Görev işaretçisi bu mesafeden yakında gizlenir (metre).
 const MARKER_HIDE := 4.0
 const MOVE_GOAL := 4.0      ## metre
@@ -32,10 +37,11 @@ var workshop_node: Interactable
 var mill: Interactable
 var iron_spot := Vector3.INF
 var _mill_seen := false
+var mill_node: Mill
 
 
 func setup(h: CanvasLayer, gather_world: GatherWorld, workshop: Interactable, p: Player, b: RepairSite = null,
-		mill_point: Interactable = null, iron_pos := Vector3.INF) -> void:
+		mill_point: Interactable = null, iron_pos := Vector3.INF, m: Mill = null) -> void:
 	hud = h
 	player = p
 	bridge = b
@@ -44,6 +50,12 @@ func setup(h: CanvasLayer, gather_world: GatherWorld, workshop: Interactable, p:
 	iron_spot = iron_pos
 	if mill != null:
 		mill.interacted.connect(func(_by): _mill_seen = true; _refresh())
+	mill_node = m
+	if m != null:
+		for site: RepairSite in [m.wall, m.wheel]:
+			site.state_changed.connect(_refresh)
+			site.cracked.connect(func(_ids): hud.show_toast("MSG_MILL_CRACKED", 4.5))
+		m.wall.completed.connect(func(): hud.show_toast("MSG_WALL_DONE", 3.5))
 	if b != null:
 		b.state_changed.connect(_refresh)
 		b.cracked.connect(func(_ids): hud.show_toast("MSG_BRIDGE_CRACKED", 4.5))
@@ -90,6 +102,9 @@ func _mold_to_highlight() -> String:
 			if missing > _parts_of(mold_id):
 				return mold_id
 		return ""
+	if GameState.tutorial_step in [Step.MILL_WALL, Step.MILL_WHEEL]:
+		var site := _step_site()
+		return _missing_mold(site, _step_molds()) if site != null else ""
 	if GameState.tutorial_step == Step.IRON_TOOL:
 		return "axe_head" if inv.count("iron") >= Crafting.slot_amount("axe_head", 0) else ""
 	if GameState.tutorial_step != Step.CRAFT:
@@ -124,7 +139,7 @@ func _set_step(s: int) -> void:
 		hud.hint_card.flash(["axe", "pickaxe", "arrow", "inventory"], 3.5)
 	elif s == Step.MILL and hud != null:
 		hud.show_toast("MSG_IRON_TOOL_MADE", 4.0)
-	elif s == Step.DONE and hud != null:
+	elif s == Step.MILL_WALL and hud != null:
 		hud.show_toast("MSG_MILL_SEEN", 5.0)
 
 
@@ -147,7 +162,11 @@ func _advance_if_ready() -> void:
 		step = Step.IRON_TOOL
 	if step == Step.IRON_TOOL and _has_iron_tool():
 		step = Step.MILL
-	if step == Step.MILL and _mill_seen:
+	if step == Step.MILL and (_mill_seen or (mill_node != null and mill_node.wall.is_complete())):
+		step = Step.MILL_WALL
+	if step == Step.MILL_WALL and mill_node != null and mill_node.wall.is_complete():
+		step = Step.MILL_WHEEL
+	if step == Step.MILL_WHEEL and mill_node != null and mill_node.wheel.is_complete() and mill_node.wall.is_complete():
 		step = Step.DONE
 	_set_step(step)
 
@@ -164,7 +183,7 @@ func _refresh() -> void:
 	if hud.workshop_panel:
 		hud.workshop_panel.set_highlight(_mold_to_highlight())
 	if hud.repair_panel:
-		hud.repair_panel.guide_enabled = GameState.tutorial_step == Step.BRIDGE
+		hud.repair_panel.guide_enabled = GameState.tutorial_step in [Step.BRIDGE, Step.MILL_WALL, Step.MILL_WHEEL]
 	var card: IconHintCard = hud.hint_card
 	match GameState.tutorial_step:
 		Step.MOVE:
@@ -190,6 +209,8 @@ func _refresh() -> void:
 			card.set_persistent([["iron", "%d/%d" % [mini(GameState.inventory.count("iron"), need), need]], "arrow", "workshop", "arrow", "axe"])
 		Step.MILL:
 			card.set_persistent(["axe", "arrow", "mill"])
+		Step.MILL_WALL, Step.MILL_WHEEL:
+			card.set_persistent(_site_card(_step_site(), _step_molds(), "mill"))
 		_:
 			card.set_persistent([])
 
@@ -225,6 +246,46 @@ func _bridge_card() -> Array:
 	return items
 
 
+# --- Onarım adımları (köprü sonrası değirmen) -----------------------------------------
+func _step_site() -> RepairSite:
+	if mill_node == null:
+		return null
+	match GameState.tutorial_step:
+		Step.MILL_WALL: return mill_node.wall
+		Step.MILL_WHEEL: return mill_node.wheel
+	return null
+
+
+func _step_molds() -> Array:
+	return WALL_MOLDS if GameState.tutorial_step == Step.MILL_WALL else WHEEL_MOLDS
+
+
+## Takılı + heybedeki parçalar yetmiyorsa atölyede yapılacak ilk kalıp; yoksa "".
+func _missing_mold(site: RepairSite, molds: Array) -> String:
+	for mold_id: String in molds:
+		var missing := Repair.slot_total(site.site_id, mold_id) - Repair.filled_count(site.state, site.site_id, mold_id)
+		if missing > _parts_of(mold_id):
+			return mold_id
+	return ""
+
+
+## Kart: her kalıp için takılı/gereken → hedef. Parça yoksa önce atölye.
+func _site_card(site: RepairSite, molds: Array, goal_icon_id: String) -> Array:
+	if site == null:
+		return []
+	var items: Array = []
+	for mold_id: String in molds:
+		var total := Repair.slot_total(site.site_id, mold_id)
+		var done := Repair.filled_count(site.state, site.site_id, mold_id)
+		items.append(["mold_" + mold_id, "%d/%d" % [done, total], done >= total])
+	items.append("arrow")
+	items.append(goal_icon_id)
+	if _missing_mold(site, molds) != "":
+		items.push_front("arrow")
+		items.push_front("workshop")
+	return items
+
+
 ## Görev işaretçisinin gösterdiği yer (yoksa INF). Köprü adımında parça yoksa atölye.
 func goal_position() -> Vector3:
 	match GameState.tutorial_step:
@@ -242,6 +303,14 @@ func goal_position() -> Vector3:
 			return _pos(workshop_node)
 		Step.MILL:
 			return _pos(mill)
+		Step.MILL_WALL, Step.MILL_WHEEL:
+			var site := _step_site()
+			if site == null:
+				return Vector3.INF
+			if _missing_mold(site, _step_molds()) != "":
+				return _pos(workshop_node)
+			var it: Interactable = site.get("interactable")
+			return _pos(it)
 	return Vector3.INF
 
 
@@ -255,6 +324,8 @@ func goal_icon() -> String:
 	if p == iron_spot:
 		return "iron"
 	if mill != null and p == _pos(mill):
+		return "mill"
+	if GameState.tutorial_step in [Step.MILL_WALL, Step.MILL_WHEEL]:
 		return "mill"
 	return "bridge"
 

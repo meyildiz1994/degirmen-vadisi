@@ -12,7 +12,7 @@ var site: RepairSite
 var slot_id := ""
 var choice := ""
 
-var _slot_list: VBoxContainer
+var _slot_list: GridContainer
 var _slot_buttons := {}
 var _parts_title: Label
 var _parts_box: VBoxContainer
@@ -39,8 +39,9 @@ func _left_column() -> Control:
 	var vb := VBoxContainer.new()
 	vb.custom_minimum_size = Vector2(260, 0)
 	vb.add_child(_section("REPAIR_POINTS"))
-	_slot_list = VBoxContainer.new()
-	_slot_list.add_theme_constant_override("separation", 6)
+	_slot_list = GridContainer.new()
+	_slot_list.add_theme_constant_override("h_separation", 6)
+	_slot_list.add_theme_constant_override("v_separation", 6)
 	vb.add_child(_slot_list)
 	return vb
 
@@ -124,30 +125,35 @@ func _build_slot_buttons() -> void:
 	for c in _slot_list.get_children():
 		c.queue_free()
 	_slot_buttons.clear()
+	# Çok yuvalı yerlerde (çark: 8) iki sütun, daha küçük düğmeler.
+	var many := Repair.slots(site.site_id).size() > 4
+	_slot_list.columns = 2 if many else 1
 	for d: Dictionary in Repair.slots(site.site_id):
 		var b := Button.new()
-		b.custom_minimum_size = Vector2(250, 70)
+		b.custom_minimum_size = Vector2(127, 58) if many else Vector2(250, 70)
 		b.toggle_mode = true
 		b.pressed.connect(select_slot.bind(str(d["id"])))
 		var row := HBoxContainer.new()
 		row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		row.offset_left = 8.0
-		row.offset_right = -8.0
+		row.offset_left = 4.0 if many else 8.0
+		row.offset_right = -4.0 if many else -8.0
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_theme_constant_override("separation", 8)
 		var ic := ItemIcon.new()
 		ic.name = "Icon"
-		ic.custom_minimum_size = Vector2(54, 54)
+		ic.custom_minimum_size = Vector2(38, 38) if many else Vector2(54, 54)
+		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(ic)
 		var l := Label.new()
 		l.text = str(d["name"])
-		l.add_theme_font_size_override("font_size", 23)
+		l.add_theme_font_size_override("font_size", 16 if many else 23)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD if many else TextServer.AUTOWRAP_OFF
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(l)
 		var mark := ItemIcon.new()
 		mark.name = "Mark"
-		mark.custom_minimum_size = Vector2(36, 54)
+		mark.custom_minimum_size = Vector2(22, 38) if many else Vector2(36, 54)
 		row.add_child(mark)
 		b.add_child(row)
 		_slot_list.add_child(b)
@@ -203,7 +209,10 @@ func _build_parts() -> void:
 		b.toggle_mode = true
 		b.button_pressed = key == choice
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.text = "        %s\n        ×%d" % [tr(Materials.display_name(Crafting.part_material(key))), mini(GameState.inventory.part_count(key), 99)]
+		var mat_name := tr(Materials.display_name(Crafting.part_material(key)))
+		if key.get_slice_count(":") > 2:
+			mat_name += "+" + tr(Materials.display_name(Crafting.part_slot_material(key, 1)))
+		b.text = "        %s\n        ×%d" % [mat_name, mini(GameState.inventory.part_count(key), 99)]
 		b.add_theme_font_size_override("font_size", 17)
 		b.pressed.connect(choose.bind(key))
 		var ic := ItemIcon.new()

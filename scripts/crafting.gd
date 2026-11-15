@@ -48,9 +48,25 @@ static func empty_choices(mold_id: String) -> Array:
 	return c
 
 
-# --- Parça kimlikleri: "kalıp:malzeme" -------------------------------------------------
+# --- Parça kimlikleri: "kalıp:malzeme" (çok yuvalıda "kalıp:gövde:harç") ----------------
 static func part_key(mold_id: String, material: String) -> String:
 	return "%s:%s" % [mold_id, material]
+
+
+## Tüm yuvaların seçimlerinden parça anahtarı (tek yuvalıda part_key ile aynı).
+static func part_key_for(mold_id: String, choices: Array) -> String:
+	var mats := []
+	for c in choices:
+		mats.append(str(c))
+	return "%s:%s" % [mold_id, ":".join(mats)]
+
+
+## Parçanın i. yuvasındaki malzeme (0: ana malzeme).
+static func part_slot_material(key: String, slot_index: int) -> String:
+	var parts := key.split(":")
+	if parts.size() <= slot_index + 1:
+		return parts[parts.size() - 1] if parts.size() > 1 else ""
+	return parts[slot_index + 1]
 
 
 static func part_mold(key: String) -> String:
@@ -62,8 +78,11 @@ static func part_material(key: String) -> String:
 
 
 static func part_name(key: String) -> String:
-	return "%s %s" % [TranslationServer.translate(Materials.display_name(part_material(key)) + "_ADJ"),
+	var n := "%s %s" % [TranslationServer.translate(Materials.display_name(part_material(key)) + "_ADJ"),
 		TranslationServer.translate(str(mold(part_mold(key)).get("name", "")))]
+	if key.get_slice_count(":") > 2:
+		n += " · " + TranslationServer.translate(Materials.display_name(part_slot_material(key, 1)))
+	return n
 
 
 ## Bir yuvaya konabilecek seçenekler. Parça yuvasında yalnız heybedeki uygun parçalar.
@@ -106,18 +125,21 @@ static func predict(mold_id: String, choices: Array) -> Array:
 		return []
 	if is_tool_mold(mold_id):
 		return _tool_stats(_preview_tool(mold_id, choices))
-	return stats_for_part(part_key(mold_id, str(choices[0])))
+	return stats_for_part(part_key_for(mold_id, choices))
 
 
 static func stats_for_part(key: String) -> Array:
 	var m := mold(part_mold(key))
-	var material := part_material(key)
+	var slot_ids := []
+	for sd: Dictionary in m.get("slots", []):
+		slot_ids.append(str(sd["id"]))
 	var out := []
 	var defs: Dictionary = m.get("stats", {})
 	for stat_key: String in defs:
 		var d: Dictionary = defs[stat_key]
 		var v := float(d.get("const", 0.0))
 		for t: Array in d.get("terms", []):
+			var material := part_slot_material(key, maxi(slot_ids.find(str(t[0])), 0))
 			v += Materials.prop(material, str(t[1])) * float(t[2])
 		out.append({"key": stat_key, "name": str(d.get("name", stat_key)), "value": clampf(v, 0.0, 10.0)})
 	return out
@@ -194,6 +216,6 @@ static func craft(inv: Inventory, mold_id: String, choices: Array) -> Dictionary
 		var t := _preview_tool(mold_id, choices)
 		inv.add_tool(t)
 		return {"kind": "tool", "tool": t}
-	var key := part_key(mold_id, str(choices[0]))
+	var key := part_key_for(mold_id, choices)
 	inv.add_part(key, 1)
 	return {"kind": "part", "key": key}

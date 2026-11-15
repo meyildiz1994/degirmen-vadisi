@@ -77,6 +77,8 @@ func commit() -> ArrayMesh:
 	arrays[Mesh.ARRAY_TEX_UV] = _uvs
 	arrays[Mesh.ARRAY_INDEX] = _indices
 	var mesh := ArrayMesh.new()
+	if _verts.is_empty():
+		return mesh  # boş kit (örn. tamamen yıkık duvar sırası): yüzeysiz mesh
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return mesh
 

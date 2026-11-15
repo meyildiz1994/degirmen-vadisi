@@ -324,5 +324,85 @@ func _test_polish(world: Node, player: Player) -> void:
 	await _frames(3)
 	check(hud.quest_marker.visible, "görev işaretçisi görünür (uzakta)")
 	world.mill.interactable.interact(player)
-	check(gs.tutorial_step == Tutorial.Step.DONE and gs.current_quest_key == "QUEST_MILL_NEXT", "değirmen incelendi: sıradaki hedef")
+	check(gs.tutorial_step == Tutorial.Step.MILL_WALL and gs.current_quest_key == "QUEST_REPAIR_WALL", "değirmen incelendi: duvarı ör")
+	check(tut.goal_position().distance_to(world.workshop.interactable.global_position) < 2.0, "duvar taşı yok: işaretçi atölyede")
+	await _test_mill(world, player)
+
+
+## Aşama 5: değirmen duvarı (taş + kil), çark (aks + dişli + 6 kanat), dönme, çatlama, final.
+func _test_mill(world: Node, player: Player) -> void:
+	print("== değirmen")
+	var gs := GameState
+	var inv := gs.inventory
+	var mill: Mill = world.mill
+	var tut: Tutorial = world.tutorial
+	# Duvar taşı: gövde + harç; eşikler
+	inv.add("stone", 10)
+	inv.add("clay", 4)
+	inv.add("reed", 2)
+	var good := Crafting.craft(inv, "block", ["stone", "clay"])
+	check(good.get("key", "") == "block:stone:clay", "duvar taşı = taş gövde + kil harç (%s)" % good.get("key", ""))
+	var n := Repair.needs("mill_wall", "wall_low")
+	check(Repair.meets("block:stone:clay", n), "taş+kil duvar şartlarını tutar")
+	check(not Repair.meets("block:stone:reed", n), "sazlı harç zayıf (bağlama düşük)")
+	check(not Repair.meets("block:oak:clay", n), "meşe gövde hafif kalır")
+	check(Crafting.part_name("block:stone:clay").contains("·"), "parça adında harç da var")
+	check(tut._mold_to_highlight() == "block", "atölyede Duvar Taşı vurgulu")
+	Crafting.craft(inv, "block", ["stone", "clay"])
+	Crafting.craft(inv, "block", ["stone", "reed"])
+	check(tut.goal_icon() == "mill", "parçalar hazır: işaretçi değirmen duvarında")
+	var rp: RepairPanel = world.hud.repair_panel
+	mill.wall.interactable.interact(player)
+	check(rp.is_open and rp.site == mill.wall, "duvar onarım paneli açıldı")
+	check(rp.choice == "block:stone:clay", "en uygun duvar taşı önce seçili")
+	rp._on_install()
+	rp._on_install()
+	check(rp.choice == "block:stone:reed", "kalan zayıf taş seçildi")
+	rp._on_install()
+	check(mill.wall.is_complete() and Repair.has_weak(mill.wall.state), "duvar örüldü (bir sıra zayıf)")
+	await _frames(2)
+	check(gs.tutorial_step == Tutorial.Step.MILL_WHEEL and gs.current_quest_key == "QUEST_REPAIR_WHEEL", "sıradaki: çark")
+	# Zayıf sıra bir süre sonra çatlar
+	mill.wall.state["crossings"] = Repair.crack_after_seconds("mill_wall") - 0.01
+	await _frames(3)
+	check(not mill.wall.is_complete() and Repair.is_cracked(mill.wall.state, "wall_top"), "zayıf sıra zamanla çatladı")
+	Crafting.craft(inv, "block", ["stone", "clay"])
+	mill.wall.install("wall_top", "block:stone:clay")
+	check(mill.wall.is_complete() and not Repair.has_weak(mill.wall.state), "duvar sağlam taşla yeniden örüldü")
+	rp.close_panel()
+	await _frames(2)
+	# Çark: kalıp şartları (meşe ideal kanat, taş dönmez, çam çürür)
+	var pn := Repair.needs("mill_wheel", "paddle_1")
+	check(Repair.meets("paddle:oak", pn), "meşe kanat ideal")
+	check(not Repair.meets("paddle:stone", pn), "taş kanat ağır")
+	check(not Repair.meets("paddle:pine", pn), "çam kanat suya dayanmaz")
+	check(Repair.meets("gear:oak", Repair.needs("mill_wheel", "gear")) and Repair.meets("axle:iron", Repair.needs("mill_wheel", "axle")), "meşe dişli, demir aks uygun")
+	check(tut._mold_to_highlight() == "axle", "atölyede önce Aks vurgulu")
+	inv.add_part("axle:oak", 1)
+	inv.add_part("gear:oak", 1)
+	inv.add_part("paddle:oak", 6)
+	mill.wheel.interactable.interact(player)
+	check(rp.is_open and rp.site == mill.wheel and rp._slot_list.columns == 2, "çark paneli iki sütunlu açıldı")
+	var finished := [false]
+	world.finale.finished.connect(func(): finished[0] = true)
+	for i in 8:
+		rp._on_install()
+	check(mill.wheel.is_complete(), "çark tamamlandı: aks + dişli + 6 kanat")
+	check(mill.wheel.interactable.display_name_key == "NAME_MILL_WHEEL_FIXED" and mill.wheel._rim_fix.visible, "çark tamam görünümünde (jant kapandı)")
+	await get_tree().create_timer(1.5).timeout
+	check(mill.wheel.spin > 0.0, "çark dönmeye başladı")
+	check(world.finale.playing and not player.input_enabled, "final sahnesi başladı, oyuncu bekliyor")
+	await get_tree().create_timer(2.0).timeout
+	var skip := InputEventAction.new()
+	skip.action = "interact"
+	skip.pressed = true
+	world.finale._unhandled_input(skip)
+	await _frames(3)
+	check(finished[0] and world.finale.done and player.input_enabled, "final geçildi, oyuncu serbest")
+	check(player.camera.current, "kamera oyuncuya döndü")
+	check(gs.tutorial_step == Tutorial.Step.DONE and gs.current_quest_key == "QUEST_VALLEY_DONE", "görev: vadi canlandı")
 	check(tut.goal_position() == Vector3.INF, "son adımda işaretçi yok")
+	var data := {}
+	world.finale.save_state(data)
+	mill.wheel.save_state(data)
+	check(bool(data["finale_done"]) and data["repaired"].has("mill_wheel"), "final ve çark kayda girdi")

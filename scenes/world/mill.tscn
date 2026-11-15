@@ -6,8 +6,6 @@
 [node name="Mill" type="Node3D"]
 script = ExtResource("1_mill")
 
-[node name="Wheel" type="Node3D" parent="."]
-
 [node name="Interactable" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8, 0, 0.4)
 script = ExtResource("2_int")
