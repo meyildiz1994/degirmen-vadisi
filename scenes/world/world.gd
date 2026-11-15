@@ -39,7 +39,7 @@ func _ready() -> void:
 	_build_gathering()
 	player.focus_changed.connect(func(t): touch.set_interact_available(t != null))
 	SaveSystem.restore_persisted_nodes()
-	tutorial.setup(hud, gather_world, workshop.interactable)
+	tutorial.setup(hud, gather_world, workshop.interactable, player)
 	AudioManager.play_music("music_explore")
 	if ScreenshotCapture.requested():
 		add_child(ScreenshotCapture.new())

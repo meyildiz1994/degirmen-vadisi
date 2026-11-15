@@ -53,7 +53,16 @@ func _run() -> void:
 	var gw: GatherWorld = world.get_node("Gathering")
 	var player: Player = world.get_node("Player")
 	check(gw.tree_field.trees.size() > 40, "ağaçlar kaynak olarak kuruldu (%d)" % gw.tree_field.trees.size())
-	check(gs.tutorial_step == 0 and gs.current_quest_key == "QUEST_FIRST_GATHER", "eğitim ilk adımda")
+	check(gs.tutorial_step == 0 and gs.current_quest_key == "QUEST_WELCOME", "tanıtım ilk adımda (yürü)")
+	var tut: Tutorial = world.get_node("Tutorial")
+	player.global_position += Vector3(5, 0, 0)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	check(gs.tutorial_step == 1, "yürüyünce 'bak' adımı (%d)" % gs.tutorial_step)
+	player.yaw += 1.6
+	await get_tree().process_frame
+	await get_tree().process_frame
+	check(gs.tutorial_step == 2 and gs.current_quest_key == "QUEST_FIRST_GATHER", "bakınca toplama adımı (%d)" % gs.tutorial_step)
 	gs.inventory.from_dict({})
 	# Elle toplama tek dokunuş
 	var pebble: Gatherable = null
@@ -75,7 +84,7 @@ func _run() -> void:
 	gs.inventory.add("branch", 2)
 	world.workshop.interactable.interact(player)
 	check(gs.inventory.has_tool("axe") and gs.inventory.has_tool("pickaxe"), "atölyede ilk taş aletler yapıldı")
-	check(gs.tutorial_step == 2, "eğitim 'kullan' adımında (%d)" % gs.tutorial_step)
+	check(gs.tutorial_step == 4, "eğitim 'kullan' adımında (%d)" % gs.tutorial_step)
 	# Ritim: tatlı vuruş 2x
 	player.global_position = tree.global_position + Vector3(1.5, 0, 0)
 	player.gather.on_interact_pressed(tree)

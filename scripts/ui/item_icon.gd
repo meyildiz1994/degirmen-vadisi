@@ -4,6 +4,8 @@ extends Control
 ## Metinsiz ipuçları ve heybe için kodla çizilen suluboya ikonlar.
 ## icon: malzeme/tohum kimliği (oak, stone, acorn...) ya da özel ikon
 ## (axe, pickaxe, workshop, tree, rock, hand, arrow, plus, check, seed).
+## Cihaza göre değişen kontrol ikonları: move, look, interact, inventory
+## (klavye/fare, gamepad ya da dokunmatik hangisi kullanılıyorsa onu çizer).
 
 @export var icon := "stone":
 	set(v):
@@ -26,6 +28,8 @@ func _ready() -> void:
 		custom_minimum_size = Vector2(56, 56)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	resized.connect(queue_redraw)
+	if not Engine.is_editor_hint():
+		InputManager.device_changed.connect(func(_d): queue_redraw())
 
 
 func _shape() -> String:
@@ -50,6 +54,9 @@ func _draw() -> void:
 	var col := _color()
 	col.a *= a
 	var ink := Color(INK, 0.85 * a)
+	if not Engine.is_editor_hint() and icon in ["move", "look", "interact", "inventory"]:
+		_control_icon(c, k, ink, a)
+		return
 	match _shape():
 		"arrow":
 			_arrow(c, k, ink)
@@ -196,3 +203,101 @@ func _hand(c: Vector2, k: float, ink: Color, a: float) -> void:
 func _arrow(c: Vector2, k: float, ink: Color) -> void:
 	draw_line(c + Vector2(-14, 0) * k, c + Vector2(10, 0) * k, ink, 4.0 * k)
 	draw_colored_polygon(PackedVector2Array([c + Vector2(16, 0) * k, c + Vector2(6, -8) * k, c + Vector2(6, 8) * k]), ink)
+
+
+# --- Cihaza göre kontrol ikonları ---------------------------------------------------
+func _control_icon(c: Vector2, k: float, ink: Color, a: float) -> void:
+	var dev: int = InputManager.device
+	var touch: bool = dev == InputManager.Device.TOUCH
+	var pad: bool = dev == InputManager.Device.GAMEPAD
+	match icon:
+		"move":
+			if touch:
+				_touch_stick(c, k, ink, a, true)
+			elif pad:
+				_pad_stick(c, k, ink, a, "L")
+			else:
+				_keycap(c + Vector2(0, -12) * k, k * 0.72, "W", ink, a)
+				for i in 3:
+					_keycap(c + Vector2(-21 + i * 21, 11) * k, k * 0.72, ["A", "S", "D"][i], ink, a)
+		"look":
+			if touch:
+				_touch_stick(c, k, ink, a, false)
+			elif pad:
+				_pad_stick(c, k, ink, a, "R")
+			else:
+				_mouse(c, k, ink, a)
+		_:
+			var g: String = InputManager.glyph_for(icon)
+			if touch:
+				_tap(c, k, ink, a)
+			elif pad:
+				draw_circle(c, 18.0 * k, Color(Palette.MOSS_LIGHT, a))
+				draw_arc(c, 18.0 * k, 0, TAU, 28, ink, 2.0 * k, true)
+				_text(c, g, int(24 * k), ink)
+			else:
+				_keycap(c, k * (1.0 if g.length() < 2 else 1.3), g, ink, a)
+
+
+func _keycap(c: Vector2, k: float, label: String, ink: Color, a: float) -> void:
+	var w := maxf(28.0, 16.0 + label.length() * 11.0) * k
+	var r := Rect2(c - Vector2(w, 28.0 * k) * 0.5, Vector2(w, 28.0 * k))
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(Palette.SUNSET_LIGHT, a)
+	sb.border_color = ink
+	sb.set_border_width_all(maxi(1, int(2.0 * k)))
+	sb.set_corner_radius_all(int(7 * k))
+	draw_style_box(sb, r)
+	_text(c, label, int(22 * k), ink)
+
+
+func _text(c: Vector2, t: String, fs: int, ink: Color) -> void:
+	var font := get_theme_default_font()
+	var ts := font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+	draw_string(font, Vector2(c.x - ts.x * 0.5, c.y + fs * 0.33), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ink)
+
+
+func _pad_stick(c: Vector2, k: float, ink: Color, a: float, side: String) -> void:
+	draw_circle(c, 19.0 * k, Color(Palette.PAPER.darkened(0.08), a))
+	draw_arc(c, 19.0 * k, 0, TAU, 28, ink, 2.0 * k, true)
+	draw_circle(c, 10.0 * k, Color(Palette.MOSS_LIGHT, a))
+	draw_arc(c, 10.0 * k, 0, TAU, 20, ink, 1.5 * k, true)
+	_text(c, side, int(16 * k), ink)
+	for d: Vector2 in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
+		var tip := c + d * 26.0 * k
+		var side_v := Vector2(-d.y, d.x) * 4.0 * k
+		draw_colored_polygon(PackedVector2Array([tip, tip - d * 6.0 * k + side_v, tip - d * 6.0 * k - side_v]), ink)
+
+
+func _touch_stick(c: Vector2, k: float, ink: Color, a: float, joystick: bool) -> void:
+	if joystick:
+		draw_arc(c, 20.0 * k, 0, TAU, 28, Color(ink, ink.a * 0.7), 2.0 * k, true)
+		draw_circle(c + Vector2(7, -5) * k, 9.0 * k, Color(Palette.SUNSET_LIGHT, a))
+		draw_arc(c + Vector2(7, -5) * k, 9.0 * k, 0, TAU, 18, ink, 1.5 * k, true)
+	else:
+		draw_line(c + Vector2(-18, 6) * k, c + Vector2(14, 6) * k, ink, 2.5 * k)
+		draw_colored_polygon(PackedVector2Array([c + Vector2(20, 6) * k, c + Vector2(12, 0) * k, c + Vector2(12, 12) * k]), ink)
+		draw_colored_polygon(PackedVector2Array([c + Vector2(-24, 6) * k, c + Vector2(-16, 0) * k, c + Vector2(-16, 12) * k]), ink)
+		draw_circle(c + Vector2(0, -6) * k, 8.0 * k, Color(Palette.SUNSET_LIGHT, a))
+		draw_arc(c + Vector2(0, -6) * k, 8.0 * k, 0, TAU, 18, ink, 1.5 * k, true)
+
+
+func _tap(c: Vector2, k: float, ink: Color, a: float) -> void:
+	draw_circle(c, 20.0 * k, Color(Palette.SUNSET_LIGHT, 0.9 * a))
+	draw_arc(c, 16.0 * k, 0, TAU, 28, Color(ink, ink.a * 0.8), 2.5 * k, true)
+	draw_arc(c, 10.0 * k, 0, TAU, 20, Color(ink, ink.a * 0.5), 2.0 * k, true)
+	draw_circle(c, 4.5 * k, ink)
+
+
+func _mouse(c: Vector2, k: float, ink: Color, a: float) -> void:
+	var body := Rect2(c + Vector2(-11, -16) * k, Vector2(22, 32) * k)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(Palette.PAPER, a)
+	sb.border_color = ink
+	sb.set_border_width_all(maxi(1, int(2.0 * k)))
+	sb.set_corner_radius_all(int(11 * k))
+	draw_style_box(sb, body)
+	draw_line(c + Vector2(0, -16) * k, c + Vector2(0, -4) * k, ink, 1.5 * k)
+	for s: float in [-1.0, 1.0]:
+		var tip := c + Vector2(s * 25.0, 0) * k
+		draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-s * 7, -5) * k, tip + Vector2(-s * 7, 5) * k]), ink)
