@@ -6,7 +6,7 @@ Hedef: Steam (PC / Steam Deck), Android, iOS.
 Tüm görseller kodla üretilir (primitive + SurfaceTool/ArrayMesh, shader, FastNoiseLite).
 Tek harici varlık: OFL lisanslı **Patrick Hand** fontu (`fonts/`).
 
-## Durum: Aşama 2 (toplama, heybe, ses aracı)
+## Durum: Aşama 4 (köprü onarımı) — oyun testi için durak
 
 | Sistem | Dosya |
 |---|---|
@@ -48,7 +48,29 @@ Tatlı vuruş 2× ilerleme. Körelmiş alet yarı güçle çalışır, asla enge
 
 Test: `godot --headless --path . res://tests/test_gathering.tscn`
 
-`/scripts` altındaki `crafting.gd`, `repair.gd`, `item_memory.gd` ilgili aşamalarda eklenecek.
+### Aşama 3: atölye
+
+| Sistem | Dosya |
+|---|---|
+| Kalıplar (Sap, Balta Başı, Kazma Başı, Kiriş, Bağlantı, Çark Kanadı, Dişli) | `data/molds.json` |
+| Üretim formülleri ve tahmin | `scripts/crafting.gd` |
+| Atölye paneli (kalıplar / yuvalar / tahmin çubukları) | `scenes/workshop/workshop_panel.gd`, `scripts/ui/stat_bar.gd`, `scripts/ui/modal_panel.gd` |
+
+### Aşama 4: köprü onarımı
+
+| Sistem | Dosya |
+|---|---|
+| Onarım yerleri ve istenen özellik eşikleri | `data/repairs.json` |
+| Onarım mantığı (takma, zayıf parça, çatlama, kayıt) | `scripts/repair.gd`, `scripts/world/repair_site.gd` |
+| Köprü (yuvalar, rampalar, geçiş kapıları, animasyon) | `scenes/world/bridge.gd` |
+| Onarım paneli (istenen ↔ seçilen parça) | `scripts/ui/repair_panel.gd` |
+
+Köprü 2 kiriş + 1 bağlantı ister. Kiriş: Sağlamlık ≥ 5, Esneklik ≥ 2 (meşe ve demir tutar; çam zayıf, taş kırılgan).
+Bağlantı: Sağlamlık ≥ 4, Esneklik ≥ 4 (meşe ve bakır tutar; saz zayıf). Eşiği tutmayan parça da takılır,
+köprü açılır, ama oyuncu iki kez geçtikten sonra batı kıyıya döndüğünde çatlar (oyuncu karşıda mahsur kalmaz).
+Onarım bitince `ACH_BRIDGE_REPAIRED` başarımı açılır, görev demir damarına yönelir.
+
+`/scripts/item_memory.gd` Aşama 6'da eklenecek.
 
 ## Sesler (ElevenLabs, yalnızca geliştirme sırasında)
 
@@ -79,7 +101,7 @@ Oyunda **F5** (veya gamepad LB) ya da duraklat menüsündeki "Grafik" butonu kal
 |---|---|---|---|
 | move | WASD / oklar | Sol çubuk | Sol yarıda sanal joystick |
 | look | Fare (oyun alanına tıkla) | Sağ çubuk | Sağ yarıda sürükle |
-| interact (topla / kes / kır / dik) | E | A | Sağ alttaki "Etkileşim" |
+| interact (topla / kes / kır / dik / onar) | E | A | Sağ alttaki "Etkileşim" |
 | inventory | Tab / I | Y | Üstteki "Heybe" |
 | pause | Esc | Start | Üstteki ‖ butonu |
 | quest_log (görev kartı) | J veya sağ üstteki ikon | D-pad yukarı | Sağ üstteki görev ikonu |

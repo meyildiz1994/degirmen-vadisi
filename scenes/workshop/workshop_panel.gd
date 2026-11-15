@@ -1,21 +1,18 @@
 class_name WorkshopPanel
-extends Control
+extends ModalPanel
 ## Atölye paneli: solda kalıplar, ortada yuvalar ve yuvaya konabilecek malzemeler,
 ## sağda tahmini istatistik çubukları ve "Üret". Sabit tarif yok; oyuncu dener, görür.
 ## Kod ile kurulur; dokunmatik hedefler ≥ 56 px, gamepad/klavye odak gezintisi çalışır.
 
-signal closed
 signal crafted(mold_id: String, result: Dictionary)
 
 const BAR_W := 190.0
 
-var is_open := false
 var mold_id := "handle"
 var choices: Array = []
 var active_slot := 0
 var highlight_mold := ""       ## eğitim: nabız gibi atan kalıp
 
-var _card: WatercolorPanel
 var _mold_list: VBoxContainer
 var _mold_buttons := {}
 var _mold_title: Label
@@ -26,33 +23,11 @@ var _stats_box: VBoxContainer
 var _hits_label: Label
 var _craft_button: Button
 var _result_label: Label
-var _tween: Tween
 var _pulse := 0.0
 
 
 func _ready() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	visible = false
-	var dim := ColorRect.new()
-	dim.color = Color(0.25, 0.18, 0.12, 0.32)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_PASS
-	add_child(dim)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(center)
-	_card = WatercolorPanel.new()
-	_card.card = true
-	_card.padding = Vector2(28, 18)
-	_card.blob_seed = 6.1
-	center.add_child(_card)
-	var root := VBoxContainer.new()
-	root.add_theme_constant_override("separation", 8)
-	_card.add_child(root)
-	root.add_child(_header())
-	root.add_child(_rule())
+	var root := _build_card("NAME_WORKSHOP", 6.1)
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 22)
 	root.add_child(cols)
@@ -65,44 +40,6 @@ func _ready() -> void:
 
 
 # --- Yapı ---------------------------------------------------------------------------
-func _header() -> Control:
-	var head := HBoxContainer.new()
-	var title := Label.new()
-	title.text = "NAME_WORKSHOP"
-	title.add_theme_font_size_override("font_size", 36)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(title)
-	var close := Button.new()
-	close.text = "✕"
-	close.custom_minimum_size = Vector2(56, 56)
-	close.pressed.connect(close_panel)
-	close.focus_mode = Control.FOCUS_NONE
-	head.add_child(close)
-	return head
-
-
-func _rule() -> ColorRect:
-	var r := ColorRect.new()
-	r.color = Color(Palette.EARTH, 0.35)
-	r.custom_minimum_size = Vector2(0, 3)
-	return r
-
-
-func _vrule() -> ColorRect:
-	var r := ColorRect.new()
-	r.color = Color(Palette.EARTH, 0.25)
-	r.custom_minimum_size = Vector2(3, 0)
-	return r
-
-
-func _section(text: String) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.add_theme_font_size_override("font_size", 26)
-	l.modulate = Color(1, 1, 1, 0.85)
-	return l
-
-
 func _left_column() -> Control:
 	var vb := VBoxContainer.new()
 	vb.custom_minimum_size = Vector2(250, 0)
@@ -189,49 +126,14 @@ func _right_column() -> Control:
 
 # --- Açma / kapama --------------------------------------------------------------------
 func open_panel() -> void:
-	is_open = true
-	visible = true
 	select_mold(mold_id if highlight_mold == "" else highlight_mold)
-	_animate(true)
+	_show_panel()
 	AudioManager.play_music("music_workshop")
 	(_mold_buttons[mold_id] as Button).grab_focus.call_deferred()
 
 
-func close_panel() -> void:
-	if not is_open:
-		return
-	is_open = false
-	_animate(false)
+func _on_closing() -> void:
 	AudioManager.play_music("music_explore")
-	closed.emit()
-
-
-func _animate(show_it: bool) -> void:
-	if _tween and _tween.is_valid():
-		_tween.kill()
-	_tween = create_tween().set_parallel(true)
-	_card.pivot_offset = _card.size * 0.5
-	if show_it:
-		modulate.a = 0.0
-		_card.scale = Vector2(0.94, 0.94)
-		_tween.tween_property(self, "modulate:a", 1.0, 0.2)
-		_tween.tween_property(_card, "scale", Vector2.ONE, 0.26).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	else:
-		_tween.tween_property(self, "modulate:a", 0.0, 0.16)
-		_tween.chain().tween_callback(hide)
-
-
-func _gui_input(event: InputEvent) -> void:
-	if (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed:
-		if not _card.get_global_rect().has_point(event.position):
-			close_panel()
-			accept_event()
-
-
-func _unhandled_input(event: InputEvent) -> void:
-	if is_open and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("pause")):
-		close_panel()
-		get_viewport().set_input_as_handled()
 
 
 # --- Seçimler -------------------------------------------------------------------------
@@ -283,14 +185,6 @@ func choose(option: String) -> void:
 		active_slot = nxt
 	_refresh()
 	_pop(_slot_row.get_child(active_slot) if active_slot < _slot_row.get_child_count() else null)
-
-
-func _pop(c: Control) -> void:
-	if c == null:
-		return
-	c.pivot_offset = c.size * 0.5
-	c.scale = Vector2(1.1, 1.1)
-	create_tween().tween_property(c, "scale", Vector2.ONE, 0.18)
 
 
 # --- Görünüm --------------------------------------------------------------------------
@@ -383,35 +277,12 @@ func _build_stats() -> void:
 		_stats_box.add_child(l)
 		return
 	for s: Dictionary in stats:
-		_stats_box.add_child(_stat_row(tr(str(s["name"])), float(s["value"]), str(s["key"]) == "weight"))
+		_stats_box.add_child(_stat_row(tr(str(s["name"])), float(s["value"]), str(s["key"]) == "weight", -1.0, BAR_W + 90.0))
 	var hits := Crafting.preview_hits(mold_id, choices)
 	var parts := []
 	for r: String in hits:
 		parts.append("%s: %d %s" % [tr(str(Materials.resource(r).get("name", r))), hits[r], tr("HITS")])
 	_hits_label.text = "\n".join(parts)
-
-
-## neutral: iyi/kötü yönü olmayan özellik (ağırlık) mavi çizilir, düşük değer uyarısı yok.
-func _stat_row(name_text: String, value: float, neutral := false) -> Control:
-	var vb := VBoxContainer.new()
-	vb.add_theme_constant_override("separation", 0)
-	var top := HBoxContainer.new()
-	var n := Label.new()
-	n.text = name_text
-	n.add_theme_font_size_override("font_size", 21)
-	n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(n)
-	var v := Label.new()
-	v.text = "%.1f" % value
-	v.add_theme_font_size_override("font_size", 21)
-	top.add_child(v)
-	vb.add_child(top)
-	var bar := StatBar.new()
-	bar.value = value
-	bar.neutral = neutral
-	bar.custom_minimum_size = Vector2(BAR_W + 90.0, 16)
-	vb.add_child(bar)
-	return vb
 
 
 func _on_craft() -> void:

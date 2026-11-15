@@ -72,6 +72,10 @@ func _draw() -> void:
 		"check":
 			draw_polyline(PackedVector2Array([c + Vector2(-12, 0) * k, c + Vector2(-3, 9) * k, c + Vector2(13, -10) * k]), Color(Palette.MOSS_DARK, a), 5.0 * k, true)
 			return
+		"crack":
+			var zig := PackedVector2Array([c + Vector2(-4, -16) * k, c + Vector2(3, -6) * k, c + Vector2(-5, 2) * k, c + Vector2(4, 9) * k, c + Vector2(-1, 16) * k])
+			draw_polyline(zig, Color(Palette.SUNSET.darkened(0.2), a), 5.0 * k, true)
+			return
 	# Suluboya zemin lekesi
 	_blob(c, 24.0 * k, Color(Palette.PAPER.lerp(col, 0.18), 0.9 * a))
 	match _shape():
@@ -88,6 +92,7 @@ func _draw() -> void:
 		"workshop": _workshop(c, k, ink, a)
 		"tree": _tree(c, k, ink, a)
 		"hand": _hand(c, k, ink, a)
+		"bridge": _bridge(c, k, ink, a)
 		"mold_handle": _handle_icon(c, k, col, ink)
 		"mold_beam": _beam(c, k, col, ink)
 		"mold_connector": _connector(c, k, col, ink)
@@ -360,3 +365,18 @@ func _gear(c: Vector2, k: float, col: Color, ink: Color) -> void:
 	_poly(pts, col, ink, 2.0 * k)
 	draw_circle(c, 5.0 * k, Color(Palette.PAPER, col.a))
 	draw_arc(c, 5.0 * k, 0, TAU, 14, ink, 1.5 * k, true)
+
+
+## Kemerli küçük köprü: iki ayak, kalas sırası, altında su çizgisi.
+func _bridge(c: Vector2, k: float, ink: Color, a: float) -> void:
+	draw_line(c + Vector2(-22, 12) * k, c + Vector2(22, 12) * k, Color(Palette.SKY, a), 5.0 * k)
+	var deck := PackedVector2Array()
+	for i in 9:
+		var t := i / 8.0
+		deck.append(c + Vector2(lerpf(-20, 20, t), -2 - sin(t * PI) * 7.0) * k)
+	draw_polyline(deck, ink, 7.0 * k, true)
+	draw_polyline(deck, Color(Palette.WOOD, a), 4.5 * k, true)
+	for x: float in [-14.0, 14.0]:
+		var top := c + Vector2(x, -2 - sin((x + 20.0) / 40.0 * PI) * 7.0) * k
+		draw_line(top, c + Vector2(x, 12) * k, ink, 5.0 * k)
+		draw_line(top, c + Vector2(x, 12) * k, Color(Palette.STONE, a), 3.0 * k)

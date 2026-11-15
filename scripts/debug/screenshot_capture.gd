@@ -7,6 +7,8 @@ extends Node
 ## Toplama sahneleri: --player=x,z,yaw_derece  --give=1 (taş aletler + malzeme)
 ##   --hits=N (odaktaki kaynağa N vuruş)  --fell=N (en yakın N ağacı kes)
 ##   --inventory_open=1  --ring=0.85 (oturum açık, halka bu aşamada dondurulur)
+## Onarım: --step=5 (eğitim adımı)  --bridge=oak,pine,copper (kuzey, güney, bağlantı; "-" boş)
+##   --repair_open=1 (onarım panelini aç)  --repair_slot=beam_south  --crack=1
 
 var _args := {}
 var _near: Gatherable
@@ -128,8 +130,39 @@ func _gather_scenario() -> void:
 		for i in range(1, parts.size()):
 			hud.workshop_panel.active_slot = i - 1
 			hud.workshop_panel.choose(parts[i])
+	if _args.has("step"):
+		GameState.tutorial_step = int(_args["step"])
+		GameState.set_quest(Tutorial.QUESTS[GameState.tutorial_step])
+	if _args.has("bridge") or _args.has("repair_open"):
+		await _bridge_scenario(world)
 	if _args.has("inventory_open"):
 		world.get_node("HUD").toggle_inventory()
+
+
+func _bridge_scenario(world: Node) -> void:
+	var bridge: RepairSite = world.get_node("Bridge")
+	var inv := GameState.inventory
+	var mats := str(_args.get("bridge", "")).split(",", false)
+	var slot_ids := ["beam_north", "beam_south", "link"]
+	for i in mini(mats.size(), slot_ids.size()):
+		if mats[i] == "-":
+			continue
+		var mold_id := str(Repair.slot_def("bridge", slot_ids[i])["mold"])
+		var key := Crafting.part_key(mold_id, mats[i])
+		inv.add_part(key, 1)
+		bridge.install(slot_ids[i], key)
+	for key: String in ["beam:oak", "beam:pine", "beam:stone", "connector:copper", "connector:reed"]:
+		inv.add_part(key, 1)
+	if _args.has("crack"):
+		bridge.crack_weak_parts()
+		await get_tree().create_timer(1.5).timeout
+	if _args.has("repair_open"):
+		var hud = world.get_node("HUD")
+		hud.open_repair(bridge)
+		if _args.has("repair_slot"):
+			hud.repair_panel.select_slot(str(_args["repair_slot"]))
+		if _args.has("repair_choice"):
+			hud.repair_panel.choose(str(_args["repair_choice"]))
 
 
 ## Oyuncuyu verilen türdeki en yakın kaynağın 1.9 m önüne, ona bakacak şekilde koy.

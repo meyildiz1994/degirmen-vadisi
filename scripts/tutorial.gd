@@ -3,12 +3,13 @@ extends Node
 ## Metinsiz tanıtım + eğitim: ikonlu ipucu kartları adım adım yol gösterir.
 ## İkonlar aktif cihaza göre değişir (WASD/fare, gamepad çubukları, dokunmatik).
 ##   0: yürü  →  1: etrafına bak  →  2: dal ve küçük taş topla
-##   3: atölyede ilk taş balta + taş kazma  →  4: bir ağaç kes, bir kaya kır  →  5: keşif
+##   3: atölyede ilk taş balta + taş kazma  →  4: bir ağaç kes, bir kaya kır
+##   5: köprüyü onar (2 kiriş + 1 bağlantı)  →  6: karşı kıyıda demir kaz  →  7: keşif
 ## Görev kartında kısa metin de var; ipucu kartı tamamen ikon ve sayı.
 
-enum Step { MOVE, LOOK, GATHER, CRAFT, USE, DONE }
+enum Step { MOVE, LOOK, GATHER, CRAFT, USE, BRIDGE, IRON, DONE }
 
-const QUESTS := ["QUEST_WELCOME", "QUEST_WELCOME", "QUEST_FIRST_GATHER", "QUEST_FIRST_TOOLS", "QUEST_USE_TOOLS", "QUEST_EXPLORE"]
+const QUESTS := ["QUEST_WELCOME", "QUEST_WELCOME", "QUEST_FIRST_GATHER", "QUEST_FIRST_TOOLS", "QUEST_USE_TOOLS", "QUEST_REPAIR_BRIDGE", "QUEST_REACH_IRON", "QUEST_EXPLORE"]
 const MOVE_GOAL := 4.0      ## metre
 const LOOK_GOAL := 1.4      ## radyan (toplam kamera dönüşü)
 
@@ -21,11 +22,18 @@ var _last_yaw := 0.0
 var _last_pitch := 0.0
 var _chopped := false
 var _mined := false
+var _iron := false
+var bridge: RepairSite
 
 
-func setup(h: CanvasLayer, gather_world: GatherWorld, workshop: Interactable, p: Player) -> void:
+func setup(h: CanvasLayer, gather_world: GatherWorld, workshop: Interactable, p: Player, b: RepairSite = null) -> void:
 	hud = h
 	player = p
+	bridge = b
+	if b != null:
+		b.state_changed.connect(_refresh)
+		b.cracked.connect(func(_ids): hud.show_toast("MSG_BRIDGE_CRACKED", 4.5))
+		b.completed.connect(func(): hud.show_toast("MSG_BRIDGE_REPAIRED", 4.0))
 	InputManager.device_changed.connect(func(_d): _refresh())
 	GameState.inventory.changed.connect(_refresh)
 	gather_world.resource_gathered.connect(_on_gathered)
@@ -101,6 +109,10 @@ func _advance_if_ready() -> void:
 	if step == Step.CRAFT and inv.has_tool("axe") and inv.has_tool("pickaxe"):
 		step = Step.USE
 	if step == Step.USE and _chopped and _mined:
+		step = Step.BRIDGE
+	if step == Step.BRIDGE and bridge != null and bridge.is_complete():
+		step = Step.IRON
+	if step == Step.IRON and _iron:
 		step = Step.DONE
 	_set_step(step)
 
@@ -125,6 +137,10 @@ func _refresh() -> void:
 			card.set_persistent(["workshop", "arrow", "mold_handle", "plus", "stone", "arrow", "axe", "pickaxe"])
 		Step.USE:
 			card.set_persistent([["axe", "", _chopped], "arrow", ["tree", "", _chopped], ["pickaxe", "", _mined], "arrow", ["rock", "", _mined]])
+		Step.BRIDGE:
+			card.set_persistent(_bridge_card())
+		Step.IRON:
+			card.set_persistent(["bridge", "arrow", "pickaxe", "arrow", "iron"])
 		_:
 			card.set_persistent([])
 
@@ -134,7 +150,30 @@ func _on_gathered(resource_id: String) -> void:
 		_chopped = true
 	elif resource_id in ["boulder", "copper_vein", "iron_vein"]:
 		_mined = true
+	if resource_id == "iron_vein":
+		_iron = true
 	_refresh()
+
+
+## Köprü kartı: kiriş ve bağlantı (takılı / gereken) → köprü. Elde parça yoksa önce atölye.
+func _bridge_card() -> Array:
+	if bridge == null:
+		return []
+	var items: Array = []
+	var any_part := false
+	for mold_id: String in ["beam", "connector"]:
+		var total := Repair.slot_total(bridge.site_id, mold_id)
+		var done := Repair.filled_count(bridge.state, bridge.site_id, mold_id)
+		items.append(["mold_" + mold_id, "%d/%d" % [done, total], done >= total])
+		for key: String in GameState.inventory.parts:
+			if Crafting.part_mold(key) == mold_id and GameState.inventory.part_count(key) > 0:
+				any_part = true
+	items.append("arrow")
+	items.append("bridge")
+	if not any_part:
+		items.push_front("arrow")
+		items.push_front("workshop")
+	return items
 
 
 ## Atölye her zaman kalıp panelini açar; eğitimdeyken doğru kalıp nabız gibi atar.

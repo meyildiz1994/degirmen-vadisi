@@ -97,3 +97,25 @@ WORKSHOP_CHOOSE,Seç,Choose
 WORKSHOP_MADE,Yapıldı,Made
 WORKSHOP_FILL_SLOTS,"Yuvalara malzeme koy, sonucu burada gör.",Put materials in the slots to see the result here.
 WORKSHOP_NEED_HANDLE,Önce Sap kalıbıyla bir sap yap.,Make a handle with the Handle mold first.
+NAME_BRIDGE_FIXED,Köprü,Bridge
+ACTION_REPAIR,Onar,Repair
+REPAIR_BEAM_NORTH,Kuzey Kiriş,North Beam
+REPAIR_BEAM_SOUTH,Güney Kiriş,South Beam
+REPAIR_LINK,Bağlantı,Joint
+REPAIR_POINTS,Onarım yerleri,Repair points
+REPAIR_NEEDS,İstenen,Required
+REPAIR_PARTS,Heybedeki parçalar,Parts in your bag
+REPAIR_SELECTED,Seçilen parça,Selected part
+REPAIR_INSTALL,Yerleştir,Install
+REPAIR_INSTALLED,Takılı,Installed
+REPAIR_CRACKED,Çatladı! Yenisini tak.,Cracked! Fit a new one.
+REPAIR_NO_PARTS,Bu yer için parça yok. Atölyede yap:,No parts for this spot. Make one at the workshop:
+REPAIR_WEAK_WARNING,"Bu parça istenenleri karşılamıyor. Bir süre dayanır, sonra çatlar.","This part falls short. It will hold for a while, then crack."
+REPAIR_GOOD,Sağlam görünüyor.,Looks sturdy.
+REPAIR_PICK_PART,Bir parça seç.,Pick a part.
+MSG_BRIDGE_REPAIRED,Köprü onarıldı! Karşı kıyıya geçebilirsin.,The bridge is repaired! You can cross to the far bank.
+MSG_BRIDGE_CRACKED,Çatırtı! Zayıf bir parça dayanamadı ve köprü yine çöktü.,Crack! A weak part gave way and the bridge collapsed again.
+QUEST_REPAIR_BRIDGE,"Köprüyü onar: atölyede 2 kiriş ve 1 bağlantı yap, köprüye tak.","Repair the bridge: make 2 beams and 1 joint at the workshop, then fit them."
+QUEST_REACH_IRON,Köprüden geç ve karşı kıyıdaki demir damarını kaz.,Cross the bridge and mine the iron vein on the far bank.
+ACHIEVEMENT_UNLOCKED,Başarım,Achievement
+ACH_BRIDGE_REPAIRED,Karşı Kıyı,The Far Bank

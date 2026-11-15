@@ -150,7 +150,74 @@ func _run() -> void:
 	var before: int = gw.tree_field.planted_list().size()
 	gw._on_planted("acorn", Vector3(-6.0, ValleyShape.height(-6.0, 12.0), 12.0))
 	check(gw.tree_field.planted_list().size() == before + 1, "palamut dikildi")
+	await _test_bridge(world, player)
 	# Ritim kapalı: basılı tutunca vurur
 	gs.set_rhythm_hits(false)
 	print("\nSonuç: %s (%d hata)" % ["BAŞARILI" if _fails == 0 else "BAŞARISIZ", _fails])
 	get_tree().quit(1 if _fails else 0)
+
+
+## Köprü onarımı: eşikler, zayıf parça, geçiş, çatlama, kayıt.
+func _test_bridge(world: Node, player: Player) -> void:
+	print("== köprü onarımı")
+	var n_beam := Repair.needs("bridge", "beam_north")
+	var n_link := Repair.needs("bridge", "link")
+	check(Repair.meets("beam:oak", n_beam), "meşe kiriş istenenleri karşılar")
+	check(not Repair.meets("beam:pine", n_beam), "çam kiriş zayıf (güç az)")
+	check(Repair.failing("beam:stone", n_beam) == ["flexibility"], "taş kiriş kırılgan (esneklik az)")
+	check(Repair.meets("connector:copper", n_link) and not Repair.meets("connector:reed", n_link), "bakır bağlantı sağlam, saz zayıf")
+	var bridge: RepairSite = world.get_node("Bridge")
+	var inv: Inventory = gs.inventory
+	var bx := ValleyShape.river_x(ValleyShape.BRIDGE_Z)
+	var start := Vector3(bx - 6.0, 0, ValleyShape.BRIDGE_Z)
+	check(not await _walk_across(player, start), "yıkık köprüden geçilemez")
+	check(player.global_position.y > ValleyShape.WATER_LEVEL, "oyuncu dereye düşmedi")
+	world.hud.open_repair(bridge)
+	var rp: RepairPanel = world.hud.repair_panel
+	check(rp.is_open and rp.slot_id == "beam_north" and rp.choice == "", "onarım paneli açıldı, parça yok")
+	inv.add_part("beam:oak", 1)
+	inv.add_part("beam:pine", 1)
+	inv.add_part("connector:copper", 1)
+	rp.select_slot("beam_north")
+	check(rp.choice == "beam:oak", "en uygun parça önce seçili")
+	rp._on_install()
+	check(Repair.is_filled(bridge.state, "beam_north") and inv.part_count("beam:oak") == 0, "kuzey kiriş takıldı, heybeden düştü")
+	check(rp.slot_id == "beam_south" and rp.choice == "beam:pine", "sıradaki yere geçti")
+	rp._on_install()
+	check(bool(Repair.slot_state(bridge.state, "beam_south")["weak"]), "çam kiriş zayıf olarak takıldı")
+	rp._on_install()
+	check(bridge.is_complete(), "köprü tamamlandı")
+	check(gs.tutorial_step == Tutorial.Step.IRON or gs.tutorial_step < Tutorial.Step.BRIDGE, "eğitim adımı ilerledi (%d)" % gs.tutorial_step)
+	await _frames(40)
+	check(await _walk_across(player, start), "onarılan köprüden karşıya geçildi")
+	check(not bridge.state["slots"]["beam_south"].has("cracked"), "doğu kıyıda çatlamaz")
+	var data := {}
+	bridge.save_state(data)
+	check(await _walk_across(player, start + Vector3(12.0, 0, 0), -1.0), "geri dönüldü")
+	await _frames(5)
+	check(Repair.is_cracked(bridge.state, "beam_south") and not bridge.is_complete(), "zayıf kiriş batı kıyıda çatladı")
+	check(Repair.is_filled(bridge.state, "beam_north"), "sağlam kiriş yerinde")
+	await _frames(90)
+	check(not await _walk_across(player, start), "çatlayınca geçiş yine kapandı")
+	bridge.load_state(data)
+	check(bridge.is_complete() and Repair.is_filled(bridge.state, "link"), "köprü kayıttan yüklendi")
+	check(data.get("repaired", []).has("bridge"), "onarılan yapı listesi")
+	rp.close_panel()
+
+
+## Oyuncuyu köprünün önüne koyup doğuya (dir=1) ya da batıya yürüt; karşı kıyıya vardı mı?
+func _walk_across(player: Player, from: Vector3, dir := 1.0) -> bool:
+	player.global_position = Vector3(from.x, ValleyShape.height(from.x, from.z) + 0.3, from.z)
+	player.velocity = Vector3.ZERO
+	player.yaw = -PI * 0.5 * dir
+	player.input_enabled = true
+	var goal := from.x + 12.0 * dir
+	Input.action_press("move_forward")
+	for i in 420:
+		await get_tree().physics_frame
+		player.yaw = -PI * 0.5 * dir
+		if (player.global_position.x - goal) * dir > 0.0:
+			break
+	Input.action_release("move_forward")
+	await get_tree().physics_frame
+	return (player.global_position.x - goal) * dir > -1.0

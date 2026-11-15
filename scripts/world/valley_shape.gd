@@ -9,6 +9,8 @@ const PLATEAU_HEIGHT := 4.5      ## Kuzeydeki şelale platosunun yüksekliği
 const WATER_LEVEL := -0.35       ## Vadi tabanındaki su yüzeyi
 const BED_DEPTH := 0.8           ## Su yüzeyinin altındaki dere yatağı derinliği
 const SEED := 1907
+const BRIDGE_Z := 8.0            ## Köprünün dere üzerindeki z konumu
+const BRIDGE_GAP_HALF := 1.0     ## Köprü önünde dere bariyerinde bırakılan yarı boşluk
 
 static var _noise: FastNoiseLite
 static var _detail: FastNoiseLite
@@ -93,7 +95,7 @@ static func detail_noise(x: float, z: float) -> float:
 
 ## Patikalar: atölye → köprü → demir damarı ve atölye → değirmen.
 static func path_points() -> Array[PackedVector2Array]:
-	var bridge_z := 8.0
+	var bridge_z := BRIDGE_Z
 	var bx := river_x(bridge_z)
 	var mill_z := -8.0
 	var mx := river_x(mill_z)

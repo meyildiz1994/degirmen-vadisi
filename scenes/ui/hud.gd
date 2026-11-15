@@ -32,6 +32,7 @@ var pickup_feed: PickupFeed
 var hint_card: IconHintCard
 var inventory_panel: InventoryPanel
 var workshop_panel: WorkshopPanel
+var repair_panel: RepairPanel
 
 
 func _ready() -> void:
@@ -101,11 +102,28 @@ func _build_gather_ui() -> void:
 	add_child(workshop_panel)
 	move_child(workshop_panel, pause_menu.get_index())
 	workshop_panel.closed.connect(_on_inventory_closed)
+	repair_panel = RepairPanel.new()
+	repair_panel.name = "RepairPanel"
+	add_child(repair_panel)
+	move_child(repair_panel, pause_menu.get_index())
+	repair_panel.closed.connect(_on_inventory_closed)
+	PlatformServices.achievement_unlocked.connect(_on_achievement)
 
 
 func open_workshop() -> void:
-	if workshop_panel.is_open:
-		return
+	if _begin_modal():
+		workshop_panel.open_panel()
+
+
+func open_repair(site: RepairSite) -> void:
+	if _begin_modal():
+		repair_panel.open_for(site)
+
+
+## Atölye ve onarım paneli ortak hazırlığı: heybeyi kapat, oyuncuyu durdur, fareyi bırak.
+func _begin_modal() -> bool:
+	if modal_open():
+		return false
 	if inventory_panel.is_open:
 		inventory_panel.close_panel()
 	AudioManager.play_ui("panel_open")
@@ -114,7 +132,17 @@ func open_workshop() -> void:
 		player.input_enabled = false
 		player.gather.stop()
 	hint_panel.visible = false
-	workshop_panel.open_panel()
+	return true
+
+
+func modal_open() -> bool:
+	return workshop_panel.is_open or repair_panel.is_open
+
+
+## Başarım kartı, onarım mesajının ardından gelsin diye biraz bekler.
+func _on_achievement(id: String) -> void:
+	var text := "%s: %s" % [tr("ACHIEVEMENT_UNLOCKED"), tr(id)]
+	get_tree().create_timer(4.2).timeout.connect(show_toast.bind(text, 3.5))
 
 
 func _on_tool_missing(kind: String, _g: Gatherable) -> void:
@@ -234,8 +262,8 @@ func set_paused(paused: bool) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if workshop_panel.is_open:
-		return  # atölye kendi girişini yönetir
+	if modal_open():
+		return  # atölye / onarım paneli kendi girişini yönetir
 	if event.is_action_pressed("pause") and inventory_panel.is_open:
 		inventory_panel.close_panel()
 		get_viewport().set_input_as_handled()
@@ -252,7 +280,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _process(_delta: float) -> void:
 	look_hint.visible = InputManager.device == InputManager.Device.KEYBOARD_MOUSE \
-		and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not get_tree().paused
+		and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not get_tree().paused \
+		and not modal_open() and not inventory_panel.is_open
 	if debug_label.visible:
 		debug_label.text = "FPS %d  |  draw %d  |  %s  |  %s" % [
 			Engine.get_frames_per_second(),
