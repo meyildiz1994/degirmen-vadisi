@@ -127,7 +127,7 @@ func _hit(sweet: bool) -> void:
 		amount *= Materials.tune("sweet_progress", 2.0)
 	tool.wear(1)
 	GameState.inventory.notify_tool_changed()
-	player.play_swing()
+	player.play_swing(sweet)
 	if target is TreeGatherable:
 		(target as TreeGatherable).set_hitter(player.global_position)
 	var g := target

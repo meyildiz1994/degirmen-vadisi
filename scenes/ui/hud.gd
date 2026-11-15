@@ -33,6 +33,8 @@ var hint_card: IconHintCard
 var inventory_panel: InventoryPanel
 var workshop_panel: WorkshopPanel
 var repair_panel: RepairPanel
+var tool_belt: ToolBelt
+var quest_marker: QuestMarker
 var _hover_cursor := false
 
 
@@ -64,6 +66,8 @@ func _ready() -> void:
 
 func bind_player(p: Player) -> void:
 	player = p
+	tool_belt.player = p
+	quest_marker.player = p
 	p.focus_changed.connect(_on_focus_changed)
 	p.interacted_with.connect(_on_interacted)
 	rhythm_ring.bind(p.gather, p.camera)
@@ -93,6 +97,20 @@ func _build_gather_ui() -> void:
 	hint_card.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	hint_card.offset_left = 12.0
 	hint_card.offset_top = 12.0
+	quest_marker = QuestMarker.new()
+	quest_marker.name = "QuestMarker"
+	root.add_child(quest_marker)
+	root.move_child(quest_marker, 0)
+	tool_belt = ToolBelt.new()
+	tool_belt.name = "ToolBelt"
+	root.add_child(tool_belt)
+	tool_belt.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	tool_belt.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	tool_belt.alignment = BoxContainer.ALIGNMENT_END
+	tool_belt.offset_right = -6.0
+	tool_belt.offset_left = -6.0
+	tool_belt.offset_top = 80.0
+	root.move_child(tool_belt, quest_panel.get_index())
 	inventory_panel = InventoryPanel.new()
 	inventory_panel.name = "InventoryPanel"
 	add_child(inventory_panel)

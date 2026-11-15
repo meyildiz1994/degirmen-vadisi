@@ -100,6 +100,10 @@ func _animate(delta: float) -> void:
 		_footstep()
 	if gather.active():
 		model.set_windup(gather.ring_phase())
+	else:
+		model.end_session()
+	_update_held()
+	_update_impact_shake(delta)
 	var bob := sin(_walk_phase * 2.0) * 0.045 * clampf(speed / walk_speed, 0.0, 1.0)
 	model.position.y = bob
 	model.rotation.z = sin(_walk_phase) * 0.04 * clampf(speed / walk_speed, 0.0, 1.0)
@@ -180,12 +184,44 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 # --- Toplama animasyonu kancaları (GatherController çağırır) --------------------------
-func set_held_tool(kind: String) -> void:
-	model.set_held_tool(kind)
+## Elde ne var: oturumdaki alet, yoksa odaktaki kaynağın istediği en iyi alet.
+## Böylece oyuncu bir ağaca yaklaşınca baltasını eline alır ("baltam var" görünür).
+func _update_held() -> void:
+	var t: ToolItem = null
+	if gather.active():
+		t = gather.tool
+	elif focus is Gatherable and not (focus as Gatherable).is_hand():
+		var g := focus as Gatherable
+		t = GameState.inventory.best_tool(g.tool_kind(), g.resource_id)
+	if t == null:
+		model.set_held_tool("")
+	else:
+		model.set_held_tool(t.kind, t.head)
 
 
-func play_swing() -> void:
-	model.strike()
+func set_held_tool(_kind: String) -> void:
+	_update_held()
+
+
+func play_swing(sweet := false) -> void:
+	model.strike(sweet)
+	_impact = 0.16 if sweet else 0.11
+
+
+var _impact := 0.0
+
+
+## Darbe anında kamerada çok kısa, küçük bir sarsıntı (rahatsız etmeyecek kadar).
+func _update_impact_shake(delta: float) -> void:
+	if _impact <= 0.0:
+		return
+	_impact = maxf(_impact - delta, 0.0)
+	var k := _impact / 0.16
+	camera.h_offset = sin(_impact * 170.0) * 0.035 * k
+	camera.v_offset = cos(_impact * 130.0) * 0.03 * k
+	if _impact <= 0.0:
+		camera.h_offset = 0.0
+		camera.v_offset = 0.0
 
 
 func play_pickup() -> void:

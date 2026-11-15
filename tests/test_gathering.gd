@@ -159,6 +159,7 @@ func _run() -> void:
 	check(gw.tree_field.planted_list().size() == before + 1, "palamut dikildi")
 	await _test_bridge(world, player)
 	await _test_mouse(player)
+	await _test_polish(world, player)
 	# Ritim kapalı: basılı tutunca vurur
 	gs.set_rhythm_hits(false)
 	print("\nSonuç: %s (%d hata)" % ["BAŞARILI" if _fails == 0 else "BAŞARISIZ", _fails])
@@ -265,3 +266,63 @@ func _test_mouse(player: Player) -> void:
 	player._unhandled_input(left)
 	check(clicked[0] == 1, "imlecin altındaki hedefe sol tık = etkileşim")
 	player.get_parent().hud.repair_panel.close_panel()
+
+
+## Üretim netliği, elde alet, köprü sonrası hedefler, görev işaretçisi, animasyonlar.
+func _test_polish(world: Node, player: Player) -> void:
+	print("== netlik / yeni hedefler")
+	var gs := GameState
+	var inv := gs.inventory
+	var hud = world.hud
+	# Malzeme kartı
+	var card: MaterialCard = hud.inventory_panel._mat_card
+	card.show_item("oak")
+	check(card.visible and card._bars.get_child_count() == 5, "malzeme kartı: 5 özellik çubuğu")
+	check(card._hint.text != "" and not card._hint.text.begins_with("MAT_"), "malzeme kartı: 'neye yarar' notu çevrildi")
+	card.show_item("")
+	check(not card.visible, "boş seçimde kart gizli")
+	# Atölye: üretince "Yapıldı" kartı
+	inv.add("iron", 2)
+	inv.add_part("handle:branch", 1)
+	var wp: WorkshopPanel = hud.workshop_panel
+	world.workshop.interactable.interact(player)
+	wp.select_mold("axe_head")
+	wp.choices = ["iron", "handle:branch"]
+	wp._on_craft()
+	await _frames(2)
+	check(wp._made_popup != null and is_instance_valid(wp._made_popup) and wp._made_popup.visible, "üretim sonucu kartı göründü")
+	wp.close_panel()
+	await _frames(2)
+	check(wp._made_popup == null or not is_instance_valid(wp._made_popup) or wp._made_popup.is_queued_for_deletion(), "panel kapanınca kart da kapandı")
+	# Alet kemeri ve elde alet
+	check(hud.tool_belt.get_child_count() >= 2, "alet kemerinde balta ve kazma (%d)" % hud.tool_belt.get_child_count())
+	var tree: Gatherable = null
+	for g in world.gather_world._gatherables:
+		if g.tool_kind() == "axe" and g.state == Gatherable.State.READY:
+			tree = g
+			break
+	player.global_position = tree.global_position + Vector3(1.5, 0.2, 0)
+	await _frames(4)
+	check(player.focus == tree and player.model.held_tool_kind() == "axe", "ağaca yaklaşınca balta ele alındı")
+	player.global_position = Vector3(-6.0, ValleyShape.height(-6.0, 12.0) + 0.3, 12.0)
+	await _frames(4)
+	# Vuruş animasyonu sırası ve toparlanma
+	player.model.strike(true)
+	check(player.model.is_striking(), "vuruş zaman çizelgesi başladı")
+	await get_tree().create_timer(0.6).timeout
+	check(not player.model.is_striking(), "vuruş bitti, kol toparlandı")
+	player.model.pickup()
+	await get_tree().create_timer(1.2).timeout
+	check(absf(player.model._rig.rotation.x) < 0.1, "çömelip kalktı, gövde dik (%.2f)" % player.model._rig.rotation.x)
+	# Köprüden sonra: demir → demir alet → değirmen
+	var tut: Tutorial = world.tutorial
+	gs.tutorial_step = Tutorial.Step.IRON
+	tut._refresh()
+	check(gs.tutorial_step == Tutorial.Step.MILL, "demir balta zaten var: değirmen adımı (%d)" % gs.tutorial_step)
+	check(gs.current_quest_key == "QUEST_VISIT_MILL", "görev: değirmene git")
+	check(tut.goal_icon() == "mill" and tut.goal_position().distance_to(world.mill.interactable.global_position) < 2.0, "işaretçi değirmeni gösteriyor")
+	await _frames(3)
+	check(hud.quest_marker.visible, "görev işaretçisi görünür (uzakta)")
+	world.mill.interactable.interact(player)
+	check(gs.tutorial_step == Tutorial.Step.DONE and gs.current_quest_key == "QUEST_MILL_NEXT", "değirmen incelendi: sıradaki hedef")
+	check(tut.goal_position() == Vector3.INF, "son adımda işaretçi yok")

@@ -70,6 +70,20 @@ Bağlantı: Sağlamlık ≥ 4, Esneklik ≥ 4 (meşe ve bakır tutar; saz zayıf
 köprü açılır, ama oyuncu iki kez geçtikten sonra batı kıyıya döndüğünde çatlar (oyuncu karşıda mahsur kalmaz).
 Onarım bitince `ACH_BRIDGE_REPAIRED` başarımı açılır, görev demir damarına yönelir.
 
+### Oyun testi sonrası netlik geçişi
+
+| Sistem | Dosya |
+|---|---|
+| Malzeme kartı: 5 özellik çubuğu + "neye yarar" notu (atölye ve heybe) | `scripts/ui/material_card.gd` |
+| Kalıp açıklaması ve "Yapıldı: X" sonuç kartı | `scenes/workshop/workshop_panel.gd` |
+| Alet kemeri (sağ üst): sahip olunan aletler, dayanıklılık, eldeki parlak | `scripts/ui/tool_belt.gd` |
+| Görev işaretçisi: hedefin yeri ve mesafesi, ekran dışındaysa kenarda ok | `scripts/ui/quest_marker.gd` |
+| Köprüden sonra: demir kaz → demirden alet yap → değirmeni incele | `scripts/tutorial.gd` |
+| Animasyonlar: kurulma, çarpma + kısa duraksama, savrulma, çömelip alma | `scenes/player/player_model.gd` |
+
+Oyuncu bir ağaca/kayaya yaklaşınca uygun aleti kendiliğinden eline alır; aletin başı malzemesinin rengindedir.
+Vuruşta gövde öne atılır ve ezilir (yay-sönüm), kamera çok hafif sarsılır, kaya basılıp geri gelir.
+
 `/scripts/item_memory.gd` Aşama 6'da eklenecek.
 
 ## Sesler (ElevenLabs, yalnızca geliştirme sırasında)
@@ -113,6 +127,8 @@ Oyunda **F5** (veya gamepad LB) ya da duraklat menüsündeki "Grafik" butonu kal
 ```
 godot --path . -- --screenshot=user://shot.png --quality=2 --locale=tr
 godot --path . -- --screenshot=user://wide.png --cam=16,9,18,-3,0.5,-10
+godot --path . -- --screenshot=user://anim.png --give=1 --player=-9.5,9.5,90 --side_cam=4 --anim=strike:0.02
+godot --path . -- --screenshot=user://made.png --workshop=axe_head,iron,handle:branch --craft=1
 ```
 
 ## Gizli anahtarlar

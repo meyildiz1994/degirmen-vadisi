@@ -93,6 +93,7 @@ func _draw() -> void:
 		"tree": _tree(c, k, ink, a)
 		"hand": _hand(c, k, ink, a)
 		"bridge": _bridge(c, k, ink, a)
+		"mill": _mill(c, k, ink, a)
 		"mold_handle": _handle_icon(c, k, col, ink)
 		"mold_beam": _beam(c, k, col, ink)
 		"mold_connector": _connector(c, k, col, ink)
@@ -380,3 +381,19 @@ func _bridge(c: Vector2, k: float, ink: Color, a: float) -> void:
 		var top := c + Vector2(x, -2 - sin((x + 20.0) / 40.0 * PI) * 7.0) * k
 		draw_line(top, c + Vector2(x, 12) * k, ink, 5.0 * k)
 		draw_line(top, c + Vector2(x, 12) * k, Color(Palette.STONE, a), 3.0 * k)
+
+
+## Değirmen: taş gövde, sivri çatı ve yanda kürekli çark.
+func _mill(c: Vector2, k: float, ink: Color, a: float) -> void:
+	var wall := Rect2(c + Vector2(-15, -4) * k, Vector2(20, 19) * k)
+	draw_rect(wall, Color(Palette.STONE, a))
+	draw_rect(wall, ink, false, 2.0 * k)
+	var roof := PackedVector2Array([c + Vector2(-19, -3) * k, c + Vector2(-5, -18) * k, c + Vector2(9, -3) * k])
+	_poly(roof, Color(Palette.ROOF, a), ink, 2.0 * k)
+	var w := c + Vector2(12, 5) * k
+	draw_circle(w, 9.0 * k, Color(Palette.WOOD, a))
+	for i in 6:
+		var d := Vector2.from_angle(i * TAU / 6.0)
+		draw_line(w, w + d * 12.0 * k, ink, 2.5 * k)
+	draw_arc(w, 9.0 * k, 0, TAU, 20, ink, 2.0 * k, true)
+	draw_rect(Rect2(c + Vector2(-9, 5) * k, Vector2(6, 10) * k), Color(Palette.INK, 0.8 * a))

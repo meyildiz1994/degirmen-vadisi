@@ -75,8 +75,12 @@ func _process(delta: float) -> void:
 		_shake = maxf(_shake - delta, 0.0)
 		var k := _shake / 0.3
 		_visual.position = _rest + Vector3(sin(_shake * 90.0), 0, cos(_shake * 70.0)) * 0.05 * k
+		# Darbede kaya kısa bir an basılır, sonra yaylanarak geri gelir.
+		var sq := sin(k * PI) * 0.09 * k
+		_visual.scale = Vector3(1.0 + sq * 0.6, 1.0 - sq, 1.0 + sq * 0.6)
 		if _shake <= 0.0:
 			_visual.position = _rest
+			_visual.scale = Vector3.ONE
 	if state == State.READY:
 		if _shake <= 0.0:
 			set_process(false)

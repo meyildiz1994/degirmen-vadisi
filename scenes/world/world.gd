@@ -41,7 +41,10 @@ func _ready() -> void:
 	SaveSystem.restore_persisted_nodes()
 	bridge.player = player
 	bridge.open_requested.connect(hud.open_repair)
-	tutorial.setup(hud, gather_world, workshop.interactable, player, bridge)
+	var iron := Vector3(props.IRON_SPOT.x, 0, props.IRON_SPOT.y)
+	iron.y = ValleyShape.height(iron.x, iron.z) + 0.8
+	tutorial.setup(hud, gather_world, workshop.interactable, player, bridge, mill.interactable, iron)
+	hud.quest_marker.tutorial = tutorial
 	AudioManager.play_music("music_explore")
 	if ScreenshotCapture.requested():
 		add_child(ScreenshotCapture.new())

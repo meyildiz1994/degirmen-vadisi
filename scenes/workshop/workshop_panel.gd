@@ -16,6 +16,10 @@ var highlight_mold := ""       ## eğitim: nabız gibi atan kalıp
 var _mold_list: VBoxContainer
 var _mold_buttons := {}
 var _mold_title: Label
+var _mold_desc: Label
+var _mat_card: MaterialCard
+var _hover_option := ""
+var _made_popup: Control
 var _slot_row: HBoxContainer
 var _option_title: Label
 var _option_grid: GridContainer
@@ -75,10 +79,13 @@ func _left_column() -> Control:
 func _center_column() -> Control:
 	var vb := VBoxContainer.new()
 	vb.custom_minimum_size = Vector2(430, 0)
-	vb.add_theme_constant_override("separation", 10)
+	vb.add_theme_constant_override("separation", 6)
 	_mold_title = Label.new()
 	_mold_title.add_theme_font_size_override("font_size", 30)
 	vb.add_child(_mold_title)
+	_mold_desc = _wrap_label("", 18, 420)
+	_mold_desc.modulate = Color(1, 1, 1, 0.8)
+	vb.add_child(_mold_desc)
 	_slot_row = HBoxContainer.new()
 	_slot_row.add_theme_constant_override("separation", 14)
 	vb.add_child(_slot_row)
@@ -89,6 +96,8 @@ func _center_column() -> Control:
 	_option_grid.add_theme_constant_override("h_separation", 8)
 	_option_grid.add_theme_constant_override("v_separation", 8)
 	vb.add_child(_option_grid)
+	_mat_card = MaterialCard.new()
+	vb.add_child(_mat_card)
 	return vb
 
 
@@ -131,9 +140,6 @@ func open_panel() -> void:
 	AudioManager.play_music("music_workshop")
 	(_mold_buttons[mold_id] as Button).grab_focus.call_deferred()
 
-
-func _on_closing() -> void:
-	AudioManager.play_music("music_explore")
 
 
 # --- Seçimler -------------------------------------------------------------------------
@@ -190,10 +196,23 @@ func choose(option: String) -> void:
 # --- Görünüm --------------------------------------------------------------------------
 func _refresh() -> void:
 	_mold_title.text = str(Crafting.mold(mold_id).get("name", mold_id))
+	_mold_desc.text = str(Crafting.mold(mold_id).get("name", mold_id)) + "_DESC"
 	_build_slots()
 	_build_options()
 	_build_stats()
 	_craft_button.disabled = not Crafting.can_craft(GameState.inventory, mold_id, choices)
+	_refresh_card()
+
+
+## Malzeme kartı: üzerine gelinen seçenek, yoksa etkin yuvadaki seçim.
+func _refresh_card() -> void:
+	var id := _hover_option if _hover_option != "" else str(choices[active_slot]) if active_slot < choices.size() else ""
+	_mat_card.show_item(id)
+
+
+func _hover(option: String) -> void:
+	_hover_option = option
+	_refresh_card()
 
 
 func _build_slots() -> void:
@@ -202,7 +221,7 @@ func _build_slots() -> void:
 	var defs := Crafting.slots(mold_id)
 	for i in defs.size():
 		var b := Button.new()
-		b.custom_minimum_size = Vector2(150, 150)
+		b.custom_minimum_size = Vector2(128, 122)
 		b.toggle_mode = true
 		b.button_pressed = i == active_slot
 		b.pressed.connect(select_slot.bind(i))
@@ -254,6 +273,9 @@ func _build_options() -> void:
 		b.text = "        %s\n        %d/%d" % [Crafting.part_name(o) if ":" in o else tr(Materials.display_name(o)), mini(have, 99), need]
 		b.add_theme_font_size_override("font_size", 17)
 		b.pressed.connect(choose.bind(o))
+		b.mouse_entered.connect(_hover.bind(o))
+		b.focus_entered.connect(_hover.bind(o))
+		b.mouse_exited.connect(_hover.bind(""))
 		var ic := ItemIcon.new()
 		ic.icon = o
 		ic.dimmed = have < need
@@ -301,6 +323,7 @@ func _on_craft() -> void:
 	t.tween_interval(2.2)
 	t.tween_property(_result_label, "modulate:a", 0.0, 0.6)
 	_pop(_craft_button)
+	_show_made(result, name_text)
 	crafted.emit(mold_id, result)
 	_autofill()
 	_refresh()
@@ -348,3 +371,74 @@ func _live_child(parent: Node, meta: String, value) -> Control:
 		if not c.is_queued_for_deletion() and c.has_meta(meta) and c.get_meta(meta) == value:
 			return c
 	return null
+
+
+## "Yapıldı!" kartı: büyük ikon, ad ve nereye gittiği. Dokununca ya da 3 sn sonra kapanır.
+func _show_made(result: Dictionary, name_text: String) -> void:
+	if _made_popup != null and is_instance_valid(_made_popup):
+		_made_popup.queue_free()
+	var is_tool: bool = result["kind"] == "tool"
+	var overlay := Control.new()
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(overlay)
+	_made_popup = overlay
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(center)
+	var card := WatercolorPanel.new()
+	card.card = true
+	card.padding = Vector2(36, 22)
+	card.blob_seed = 9.2
+	center.add_child(card)
+	var vb := VBoxContainer.new()
+	vb.alignment = BoxContainer.ALIGNMENT_CENTER
+	vb.add_theme_constant_override("separation", 6)
+	card.add_child(vb)
+	var ic := ItemIcon.new()
+	ic.icon = (result["tool"] as ToolItem).kind if is_tool else str(result["key"])
+	if is_tool and (result["tool"] as ToolItem).head != "stone":
+		ic.tint = Materials.color((result["tool"] as ToolItem).head).lightened(0.25)
+	ic.custom_minimum_size = Vector2(128, 128)
+	ic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	vb.add_child(ic)
+	var title := Label.new()
+	title.text = "%s: %s" % [tr("WORKSHOP_MADE"), name_text]
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 32)
+	vb.add_child(title)
+	var hint := _wrap_label("CRAFTED_TOOL_HINT" if is_tool else "CRAFTED_PART_HINT", 20, 420)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vb.add_child(hint)
+	var tap := Label.new()
+	tap.text = "CRAFTED_TAP_TO_CLOSE"
+	tap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tap.add_theme_font_size_override("font_size", 16)
+	tap.modulate.a = 0.6
+	vb.add_child(tap)
+	overlay.gui_input.connect(func(e: InputEvent):
+		if (e is InputEventMouseButton or e is InputEventScreenTouch) and e.pressed:
+			_close_made(overlay))
+	card.pivot_offset = Vector2(250, 150)
+	card.scale = Vector2(0.6, 0.6)
+	ic.pivot_offset = Vector2(64, 64)
+	var t := overlay.create_tween()
+	t.tween_property(card, "scale", Vector2.ONE, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.parallel().tween_property(ic, "rotation", TAU, 0.5).from(-0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_interval(2.6)
+	t.tween_callback(_close_made.bind(overlay))
+
+
+func _close_made(overlay: Control) -> void:
+	if not is_instance_valid(overlay) or overlay.is_queued_for_deletion():
+		return
+	var t := overlay.create_tween()
+	t.tween_property(overlay, "modulate:a", 0.0, 0.2)
+	t.tween_callback(overlay.queue_free)
+
+
+func _on_closing() -> void:
+	AudioManager.play_music("music_explore")
+	if _made_popup != null and is_instance_valid(_made_popup):
+		_made_popup.queue_free()

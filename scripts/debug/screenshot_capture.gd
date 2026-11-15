@@ -141,10 +141,46 @@ func _gather_scenario() -> void:
 		for i in range(1, parts.size()):
 			hud.workshop_panel.active_slot = i - 1
 			hud.workshop_panel.choose(parts[i])
+	if _args.has("craft"):
+		world.get_node("HUD").workshop_panel._on_craft()
+	if _args.has("side_cam"):
+		# Oyuncuyu yandan gösteren kamera (animasyon kareleri için). Değer: uzaklık.
+		var d := float(_args["side_cam"])
+		var basis := Basis(Vector3.UP, player.model.rotation.y)
+		var at := player.global_position + Vector3(0, 0.95, 0)
+		var cam := Camera3D.new()
+		cam.fov = 50.0
+		world.add_child(cam)
+		cam.look_at_from_position(at + basis * Vector3(d, 0.35, -d * 0.35), at)
+		cam.make_current()
+	if _args.has("anim"):
+		await _anim_pose(player, str(_args["anim"]))
 	if _args.has("bridge") or _args.has("repair_open"):
 		await _bridge_scenario(world)
 	if _args.has("inventory_open"):
 		world.get_node("HUD").toggle_inventory()
+
+
+## --anim=strike:0.05 | pickup:0.25 | windup:0.9 — pozu o anda dondur (animasyon karesi).
+func _anim_pose(player: Player, spec: String) -> void:
+	var kv := spec.split(":")
+	var t := float(kv[1]) if kv.size() > 1 else 0.1
+	var m = player.model
+	if GameState.inventory.best_tool("axe", "oak_tree") != null:
+		m.set_held_tool("axe", GameState.inventory.best_tool("axe", "oak_tree").head)
+	player.set_process(false)  # elde alet seçimini ezmesin
+	match kv[0]:
+		"strike":
+			m.set_windup(1.0)
+			await get_tree().create_timer(0.4).timeout
+			m.strike(true)
+		"pickup":
+			m.pickup()
+		"windup":
+			m.set_windup(t)
+			t = 0.5
+	await get_tree().create_timer(t).timeout
+	m.set_process(false)
 
 
 func _bridge_scenario(world: Node) -> void:
