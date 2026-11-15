@@ -20,8 +20,8 @@ func _ready() -> void:
 func _build_sun() -> void:
 	sun = DirectionalLight3D.new()
 	sun.name = "Sun"
-	sun.light_color = Color(1.0, 0.89, 0.74)
-	sun.light_energy = 1.25
+	sun.light_color = Color(1.0, 0.93, 0.82)
+	sun.light_energy = 1.4
 	sun.shadow_enabled = true
 	sun.shadow_bias = 0.06
 	sun.shadow_normal_bias = 1.6
@@ -63,20 +63,20 @@ func _build_environment() -> void:
 	environment.sky = sky
 	# Gölgeler siyah değil lavanta: ortam ışığı sabit lavanta rengi
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color(0.66, 0.62, 0.82)
-	environment.ambient_light_energy = 0.74
+	environment.ambient_light_color = Color(0.64, 0.62, 0.88)
+	environment.ambient_light_energy = 0.8
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
 	environment.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	environment.tonemap_exposure = 1.0
 	# Kâğıt tonunda derinlik sisi: uzaklar kâğıda solar
 	environment.fog_enabled = true
 	environment.fog_mode = Environment.FOG_MODE_DEPTH
-	environment.fog_light_color = Palette.PAPER.lerp(Palette.SUNSET_LIGHT, 0.15)
+	environment.fog_light_color = Palette.PAPER.lerp(Palette.SUNSET_LIGHT, 0.3)
 	environment.fog_light_energy = 1.0
 	environment.fog_sun_scatter = 0.15
 	environment.fog_density = 1.0
-	environment.fog_depth_begin = 18.0
-	environment.fog_depth_end = 95.0
+	environment.fog_depth_begin = 30.0
+	environment.fog_depth_end = 130.0
 	environment.fog_depth_curve = 1.6
 	environment.fog_sky_affect = 0.0
 	environment.adjustment_enabled = false

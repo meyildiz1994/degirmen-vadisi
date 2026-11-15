@@ -6,19 +6,19 @@ uniform sampler2D screen_tex : hint_screen_texture, filter_linear_mipmap;
 uniform sampler2D paper_noise : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform sampler2D blot_noise : hint_default_white, filter_linear, repeat_enable;
 uniform vec3 paper_color : source_color = vec3(0.96, 0.92, 0.84);
-uniform float paper_strength = 0.16;
+uniform float paper_strength = 0.10;
 uniform float paper_scale = 2.2;
-uniform float saturation = 0.9;
-uniform vec3 warm_tint : source_color = vec3(1.03, 0.99, 0.92);
+uniform float saturation = 1.14;
+uniform vec3 warm_tint : source_color = vec3(1.03, 1.0, 0.95);
 uniform bool bleed_enabled = true;
 uniform float bleed_amount = 0.0022;
 uniform bool wet_edges_enabled = true;
 uniform float wet_edge_strength = 0.35;
 uniform bool kuwahara_enabled = false;
 uniform int kuwahara_radius = 2;
-uniform float vignette_start = 0.62;
+uniform float vignette_start = 0.72;
 uniform float vignette_width = 0.38;
-uniform float vignette_strength = 0.92;
+uniform float vignette_strength = 0.78;
 
 vec3 sample_screen(vec2 uv) {
 	return textureLod(screen_tex, uv, 0.0).rgb;

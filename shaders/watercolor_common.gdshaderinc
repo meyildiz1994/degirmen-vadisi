@@ -2,13 +2,14 @@
 // Işık 2-3 yumuşak basamağa bölünür; aydınlık taraf sıcak sarıya kayar.
 // Gölge tarafı siyah değil: Environment'taki lavanta ortam ışığı görünür.
 
-uniform vec3 light_tint : source_color = vec3(1.0, 0.92, 0.76);
-uniform vec3 mid_tint : source_color = vec3(0.86, 0.74, 0.70);
+uniform vec3 light_tint : source_color = vec3(1.0, 0.96, 0.86);
+uniform vec3 mid_tint : source_color = vec3(0.92, 0.72, 0.70);
 uniform float band_low = 0.06;
 uniform float band_high = 0.50;
 uniform float band_softness = 0.045;
 uniform float light_strength = 1.05;
 uniform float terminator_darken = 0.18;
+uniform float pigment_vibrance = 1.22;
 
 vec3 wc_light(vec3 n, vec3 l, vec3 light_color, float attenuation) {
 	float ndl = dot(n, l);
@@ -45,7 +46,9 @@ vec3 wc_pigment(vec3 base, vec2 n, float variation) {
 	vec3 warm = vec3(1.06, 0.99, 0.88);
 	vec3 cool = vec3(0.93, 0.97, 1.07);
 	base *= mix(cool, warm, smoothstep(0.3, 0.7, n.y));
-	return base;
+	// Canlılık: pigment doygunluğunu biraz artır
+	float l = dot(base, vec3(0.299, 0.587, 0.114));
+	return max(mix(vec3(l), base, pigment_vibrance), vec3(0.0));
 }
 
 vec3 wc_edge_pigment(vec3 base, vec3 normal, vec3 view, float amount) {

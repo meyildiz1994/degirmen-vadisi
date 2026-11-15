@@ -1,9 +1,9 @@
 shader_type sky;
 // Kodla üretilmiş gün batımı gökyüzü: yumuşak gradyan + kenarları dağınık bulutlar.
 
-uniform vec3 zenith_color : source_color = vec3(0.52, 0.67, 0.82);
-uniform vec3 mid_color : source_color = vec3(0.86, 0.77, 0.80);
-uniform vec3 horizon_color : source_color = vec3(0.99, 0.77, 0.52);
+uniform vec3 zenith_color : source_color = vec3(0.38, 0.60, 0.88);
+uniform vec3 mid_color : source_color = vec3(0.92, 0.70, 0.78);
+uniform vec3 horizon_color : source_color = vec3(1.0, 0.68, 0.38);
 uniform vec3 paper_color : source_color = vec3(0.96, 0.92, 0.84);
 uniform vec3 sun_color : source_color = vec3(1.0, 0.72, 0.42);
 uniform vec3 cloud_light : source_color = vec3(1.0, 0.92, 0.82);

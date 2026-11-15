@@ -3,8 +3,8 @@ shader_type spatial;
 // UV.x: dere boyunca enine (0..1), UV.y: akış yönünde metre. COLOR.r: akış hızı çarpanı.
 render_mode blend_mix, depth_draw_never, cull_disabled, unshaded, specular_disabled, shadows_disabled;
 
-uniform vec4 deep_color : source_color = vec4(0.33, 0.55, 0.66, 0.80);
-uniform vec4 shallow_color : source_color = vec4(0.52, 0.74, 0.70, 0.62);
+uniform vec4 deep_color : source_color = vec4(0.18, 0.50, 0.70, 0.84);
+uniform vec4 shallow_color : source_color = vec4(0.32, 0.76, 0.72, 0.66);
 uniform vec4 stroke_color : source_color = vec4(0.98, 0.96, 0.91, 0.85);
 uniform vec3 sunset_glint : source_color = vec3(0.99, 0.80, 0.58);
 uniform vec3 paper_color : source_color = vec3(0.96, 0.92, 0.84);
