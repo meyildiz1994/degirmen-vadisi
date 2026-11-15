@@ -185,3 +185,23 @@ FINALE_SKIP,(geçmek için dokun),(tap to skip)
 ACH_MILL_WALL,Taş Üstüne Taş,Stone on Stone
 ACH_MILL_WHEEL,Su Yeniden Akar,Water Flows Again
 ACH_VALLEY_RESTORED,Değirmen Vadisi,Mill Valley
+ITEM_EPITHET_OLD,Yaşlı,Old
+ITEM_EPITHET_LOYAL,Sadık,Loyal
+ITEM_EPITHET_WISE,Bilge,Wise
+ITEM_EPITHET_PATIENT,Sabırlı,Patient
+ITEM_EPITHET_BRAVE,Cesur,Brave
+ITEM_EPITHET_TIRELESS,Yorulmaz,Tireless
+ITEM_HIST_TREES,%d ağaç kesti,felled %d trees
+ITEM_HIST_ROCKS,%d kaya kırdı,broke %d rocks
+ITEM_HIST_COPPER,%d bakır kazdı,mined %d copper
+ITEM_HIST_IRON,%d demir kazdı,mined %d iron
+ITEM_DEED_BRIDGE,köprüyü onardı,mended the bridge
+ITEM_DEED_MILL_WALL,değirmen duvarını ördü,rebuilt the mill wall
+ITEM_DEED_MILL_WHEEL,çarkı döndürdü,set the wheel turning
+MSG_TOOL_NAMED,Aletin bir isim kazandı: %s,Your tool earned a name: %s
+TOOL_REPAIR,Tamir et (baş malzemesinden 1),Repair (1 of the head material)
+VOL_TITLE,Ses,Sound
+VOL_MUSIC,Müzik,Music
+VOL_SFX,Efektler,Effects
+VOL_AMBIENCE,Doğa sesleri,Ambience
+VOL_UI,Arayüz,Interface

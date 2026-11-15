@@ -1,7 +1,8 @@
 extends Node
 ## Platforma özel her şey burada toplanır. Oyun mantığı yalnızca bu arayüzü çağırır.
 ## Steam (GodotSteam) yoksa (mobil, editör, eklenti kurulmamış) sessizce devre dışı kalır.
-## Aşama 6'da başarımlar ve Steam Cloud tam bağlanacak.
+## Başarımlar bir kez açılır (SaveSystem.data["achievements"]); Steam açıldığında
+## önceden açılmış olanlar da Steam'e yeniden bildirilir. Kayıt Steam Cloud'a yazılır.
 
 signal achievement_unlocked(id: String)
 
@@ -26,6 +27,9 @@ func _init_steam() -> void:
 	steam_ready = typeof(result) == TYPE_DICTIONARY and int(result.get("status", 1)) == 0
 	if not steam_ready:
 		push_warning("PlatformServices: Steam başlatılamadı, devre dışı.")
+	else:
+		SaveSystem.loaded.connect(sync_achievements)
+		sync_achievements.call_deferred()
 
 
 func is_steam_available() -> bool:
@@ -41,8 +45,28 @@ func platform_name() -> String:
 
 
 # --- Başarımlar ----------------------------------------------------------
-func unlock_achievement(id: String) -> void:
+func is_unlocked(id: String) -> bool:
+	return SaveSystem.data.get("achievements", []).has(id)
+
+
+## Dönüş: ilk kez açıldıysa true (tekrar çağrılar sessizce yok sayılır).
+func unlock_achievement(id: String) -> bool:
+	if id == "" or is_unlocked(id):
+		return false
+	var list: Array = SaveSystem.data.get_or_add("achievements", [])
+	list.append(id)
 	achievement_unlocked.emit(id)
+	_report(id)
+	return true
+
+
+## Kayıttaki başarımları platforma yeniden bildir (çevrimdışı açılanlar için).
+func sync_achievements() -> void:
+	for id in SaveSystem.data.get("achievements", []):
+		_report(str(id))
+
+
+func _report(id: String) -> void:
 	if steam_ready:
 		steam.call("setAchievement", id)
 		steam.call("storeStats")

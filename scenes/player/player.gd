@@ -196,7 +196,7 @@ func _update_held() -> void:
 	if t == null:
 		model.set_held_tool("")
 	else:
-		model.set_held_tool(t.kind, t.head)
+		model.set_held_tool(t.kind, t.head, ItemMemory.wear_level(t))
 
 
 func set_held_tool(_kind: String) -> void:

@@ -38,6 +38,7 @@ func _run() -> void:
 	stone_axe.durability = 0
 	check(stone_axe.hits_for("oak_tree") > 5, "körelmiş alet daha yavaş")
 
+	_test_item_memory()
 	print("== kalıplar")
 	var pine := Crafting.stats_for_part("paddle:pine")
 	var oak := Crafting.stats_for_part("paddle:oak")
@@ -406,3 +407,64 @@ func _test_mill(world: Node, player: Player) -> void:
 	world.finale.save_state(data)
 	mill.wheel.save_state(data)
 	check(bool(data["finale_done"]) and data["repaired"].has("mill_wheel"), "final ve çark kayda girdi")
+
+
+## Aşama 6: eşya hafızası (isim, geçmiş, koyulaşma, tamir), başarımlar bir kez, ses ayarı.
+func _test_item_memory() -> void:
+	print("== eşya hafızası")
+	SaveSystem.autosave_enabled = false
+	var t := ToolItem.create("axe", "stone", "branch")
+	for i in 49:
+		t.wear()
+	check(not ItemMemory.maybe_name(t), "49 kullanımda isim yok")
+	t.wear()
+	check(ItemMemory.maybe_name(t) and ItemMemory.is_named(t), "50 kullanımda isim kazanır")
+	check(not ItemMemory.maybe_name(t), "isim bir kez verilir")
+	var tr_name := t.display_name()
+	check(tr_name.ends_with(t.base_name()) and tr_name != t.base_name(), "isim: sıfat + alet (%s)" % tr_name)
+	var old_loc := TranslationServer.get_locale()
+	TranslationServer.set_locale("tr")
+	tr_name = t.display_name()
+	TranslationServer.set_locale("en")
+	check(t.display_name() != tr_name, "isim dile göre çevrilir (%s)" % t.display_name())
+	TranslationServer.set_locale(old_loc)
+	for i in 12:
+		ItemMemory.record_gather(t, "oak_tree")
+	ItemMemory.record_gather(t, "boulder")
+	ItemMemory.record_gather(t, "reeds")
+	ItemMemory.record_deed([t], "bridge")
+	ItemMemory.record_deed([t], "bridge")
+	var fresh := ToolItem.create("pickaxe", "stone", "branch")
+	ItemMemory.record_deed([fresh], "bridge")
+	check(fresh.deeds.is_empty(), "hiç kullanılmamış alet onarıma katılmış sayılmaz")
+	var hist := ItemMemory.history_text(t)
+	check("12" in hist and t.deeds == ["bridge"], "geçmiş: 12 ağaç, köprü (%s)" % hist)
+	check(ItemMemory.darkness(t) > 0.2 and ItemMemory.wear_level(t) >= 1, "kullandıkça koyulaşır")
+	check(ItemMemory.darkness(fresh) == 0.0 and ItemMemory.wear_level(fresh) == 0, "yeni alet açık renkli")
+	var back := ToolItem.from_dict(JSON.parse_string(JSON.stringify(t.to_dict())))
+	check(back.display_name() == t.display_name() and back.history == t.history and back.deeds == t.deeds, "isim ve geçmiş kayda girer")
+	# Tamir
+	var inv := Inventory.new()
+	check(not ItemMemory.can_repair(t, inv), "malzeme yoksa tamir yok")
+	inv.add("stone", 2)
+	check(ItemMemory.repair(t, inv) and t.durability == t.max_durability and inv.count("stone") == 1 and t.repairs == 1, "tamir: 1 taş, dayanıklılık dolar")
+	check(not ItemMemory.can_repair(t, inv), "dolu alet tamir edilmez")
+	# Başarımlar bir kez
+	var had: Array = SaveSystem.data.get("achievements", []).duplicate()
+	SaveSystem.data["achievements"] = []
+	var fired := [0]
+	var cb := func(_id): fired[0] += 1
+	PlatformServices.achievement_unlocked.connect(cb)
+	check(not SaveSystem.persistent, "test oyuncunun kaydına dokunmaz")
+	check(PlatformServices.unlock_achievement("ACH_TEST"), "başarım ilk kez açılır")
+	check(not PlatformServices.unlock_achievement("ACH_TEST") and fired[0] == 1, "başarım tekrar açılmaz")
+	PlatformServices.achievement_unlocked.disconnect(cb)
+	SaveSystem.data["achievements"] = had
+	# Ses ayarı
+	var vs := VolumeSettings.new()
+	add_child(vs)
+	vs.sliders["Music"].value = 0.3
+	check(is_equal_approx(float(SaveSystem.data["settings"]["volume"]["Music"]), 0.3), "müzik çubuğu kayda yazılır")
+	check(vs.sliders["Music"].custom_minimum_size.y >= 48.0, "ses çubuğu ≥48 px")
+	vs.sliders["Music"].value = 0.8
+	vs.queue_free()

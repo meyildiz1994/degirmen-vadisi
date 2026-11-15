@@ -214,6 +214,7 @@ func _tool_row(t: ToolItem) -> Control:
 	var ic := ItemIcon.new()
 	ic.icon = t.kind
 	ic.custom_minimum_size = Vector2(56, 56)
+	ic.tint = (Materials.color(t.head).lightened(0.25) if t.head != "stone" else Color.WHITE).darkened(ItemMemory.darkness(t))
 	row.add_child(ic)
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 2)
@@ -224,6 +225,16 @@ func _tool_row(t: ToolItem) -> Control:
 	vb.add_child(name_l)
 	var bar := _bar(t.durability_ratio())
 	vb.add_child(bar)
+	# Eşya hafızası: ne yaptığı (isim kazanmadıysa da görünür).
+	var hist := ItemMemory.history_text(t)
+	if hist != "":
+		var hl := Label.new()
+		hl.text = hist
+		hl.add_theme_font_size_override("font_size", 15)
+		hl.modulate.a = 0.75
+		hl.autowrap_mode = TextServer.AUTOWRAP_WORD
+		hl.custom_minimum_size = Vector2(260, 0)
+		vb.add_child(hl)
 	row.add_child(vb)
 	var stats := Label.new()
 	stats.text = "%s %.1f · %s %.1f" % [tr("STAT_POWER"), t.power, tr("STAT_WEIGHT"), t.weight]
@@ -231,8 +242,34 @@ func _tool_row(t: ToolItem) -> Control:
 		stats.text = tr("TOOL_BLUNT")
 	stats.add_theme_font_size_override("font_size", 19)
 	stats.modulate.a = 0.8
+	stats.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(stats)
+	if t.durability < t.max_durability:
+		row.add_child(_repair_button(t))
 	return row
+
+
+## Tamir: baş malzemesinden 1 birim (ikonla gösterilir). Malzeme yoksa soluk.
+func _repair_button(t: ToolItem) -> Control:
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(96, 52)
+	b.tooltip_text = tr("TOOL_REPAIR")
+	b.text = "×1"
+	b.alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	b.add_theme_font_size_override("font_size", 20)
+	b.disabled = not ItemMemory.can_repair(t, GameState.inventory)
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var ic := ItemIcon.new()
+	ic.icon = t.head
+	ic.position = Vector2(6, 6)
+	ic.size = Vector2(40, 40)
+	ic.dimmed = b.disabled
+	b.add_child(ic)
+	b.pressed.connect(func():
+		if ItemMemory.repair(t, GameState.inventory):
+			AudioManager.play_sfx("craft_success")
+			PlatformServices.vibrate(30))
+	return b
 
 
 func _bar(ratio: float) -> Control:

@@ -1,7 +1,7 @@
 class_name ToolItem
 extends RefCounted
 ## Envanterde slot kaplayan tek tek aletler. Her alet kendi geçmişini taşır
-## (kullanım sayısı, aşınma). Aşama 6'da item_memory.gd bu verilere isim ve renk ekler.
+## (kullanım sayısı, aşınma, ne yaptığı). İsim, geçmiş metni ve tamir: item_memory.gd.
 
 var uid := ""
 var kind := "axe"         ## axe | pickaxe
@@ -13,6 +13,10 @@ var max_durability := 100
 var durability := 100
 var uses := 0
 var custom_name := ""
+var epithet := ""          ## isim kazanınca sıfat anahtarı (ITEM_EPITHET_*); dil değişince isim de çevrilir
+var history := {}         ## "trees" / "rocks" / "copper" / "iron" -> adet
+var deeds: Array = []     ## katıldığı onarımlar: "bridge", "mill_wall", "mill_wheel"
+var repairs := 0
 
 
 static func create(tool_kind: String, head_mat: String, handle_mat: String) -> ToolItem:
@@ -36,7 +40,7 @@ func is_blunt() -> bool:
 	return durability <= 0
 
 
-## Körelmiş alet de çalışır, sadece yarı güçle (Aşama 6'da onarılabilir).
+## Körelmiş alet de çalışır, sadece yarı güçle (heybeden tamir edilebilir).
 func effective_power() -> float:
 	return power * (Materials.tune("blunt_power_factor", 0.5) if is_blunt() else 1.0)
 
@@ -61,11 +65,18 @@ func durability_ratio() -> float:
 func display_name() -> String:
 	if custom_name != "":
 		return custom_name
+	if epithet != "":
+		return "%s %s" % [TranslationServer.translate(epithet), base_name()]
+	return base_name()
+
+
+func base_name() -> String:
 	return "%s %s" % [TranslationServer.translate(Materials.display_name(head) + "_ADJ"), TranslationServer.translate(Materials.tool_name_key(kind))]
 
 
 func to_dict() -> Dictionary:
-	return {"uid": uid, "kind": kind, "head": head, "handle": handle, "durability": durability, "uses": uses, "name": custom_name}
+	return {"uid": uid, "kind": kind, "head": head, "handle": handle, "durability": durability, "uses": uses,
+		"name": custom_name, "epithet": epithet, "history": history.duplicate(), "deeds": deeds.duplicate(), "repairs": repairs}
 
 
 static func from_dict(d: Dictionary) -> ToolItem:
@@ -78,4 +89,16 @@ static func from_dict(d: Dictionary) -> ToolItem:
 	t.durability = clampi(int(d.get("durability", t.max_durability)), 0, t.max_durability)
 	t.uses = int(d.get("uses", 0))
 	t.custom_name = str(d.get("name", ""))
+	t.epithet = str(d.get("epithet", ""))
+	if t.epithet != "" and not ItemMemory.EPITHETS.has(t.epithet):
+		t.epithet = ""
+	var h = d.get("history", {})
+	if typeof(h) == TYPE_DICTIONARY:
+		for k in h:
+			t.history[str(k)] = int(h[k])
+	var dd = d.get("deeds", [])
+	if typeof(dd) == TYPE_ARRAY:
+		for x in dd:
+			t.deeds.append(str(x))
+	t.repairs = int(d.get("repairs", 0))
 	return t

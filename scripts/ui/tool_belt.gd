@@ -50,7 +50,7 @@ func _slot(t: ToolItem) -> Control:
 	var ic := ItemIcon.new()
 	ic.icon = t.kind
 	ic.custom_minimum_size = Vector2(52, 52)
-	ic.tint = Materials.color(t.head).lightened(0.25) if t.head != "stone" else Color.WHITE
+	ic.tint = (Materials.color(t.head).lightened(0.25) if t.head != "stone" else Color.WHITE).darkened(ItemMemory.darkness(t))
 	vb.add_child(ic)
 	var bar := StatBar.new()
 	bar.value = t.durability_ratio() * 10.0

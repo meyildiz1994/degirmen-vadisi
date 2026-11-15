@@ -1,21 +1,28 @@
 extends Node
 ## user:// klasörüne JSON kayıt: ayarlar, oyuncu konumu, heybe, dünyadaki kaynakların
-## durumu (kesilen ağaçlar, dikilen fidanlar). Onarımlar ve eşya geçmişi sonraki aşamalarda.
-## Mobilde uygulama arka plana atıldığında otomatik kaydeder.
+## durumu (kesilen ağaçlar, dikilen fidanlar), onarımlar, aletlerin geçmişi (heybede, alet
+## başına), açılan başarımlar. 90 saniyede bir, onarım bitince, kapanışta ve mobilde arka
+## plana atılınca kaydeder.
 
 signal saved
 signal loaded
 
 const SAVE_PATH := "user://save.json"
 const SAVE_VERSION := 1
+const AUTOSAVE_SECONDS := 90.0
 const PERSIST_GROUP := &"persist"  ## save_state(dict) / load_state(dict) uygulayan düğümler
 
 var data: Dictionary = {}
+var autosave_enabled := true
+## Testler ve ekran görüntüsü aracı oyuncunun kaydını okumaz/yazmaz.
+var persistent := true
+var _since_save := 0.0
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	data = _default_data()
+	persistent = not _is_tool_run()
 	load_game()
 	# AudioManager henüz hazır olmayabilir; ayarları bir kare sonra uygula.
 	apply_settings.call_deferred()
@@ -36,12 +43,22 @@ func _default_data() -> Dictionary:
 		"tutorial_step": 0,
 		"world": {},
 		"repaired": [],
-		"item_history": [],
+		"achievements": [],
 	}
 
 
+static func _is_tool_run() -> bool:
+	for a in OS.get_cmdline_args():
+		if a.begins_with("res://tests/"):
+			return true
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--screenshot"):
+			return true
+	return false
+
+
 func load_game() -> bool:
-	if not FileAccess.file_exists(SAVE_PATH):
+	if not persistent or not FileAccess.file_exists(SAVE_PATH):
 		return false
 	var text := FileAccess.get_file_as_string(SAVE_PATH)
 	var parsed = JSON.parse_string(text)
@@ -53,13 +70,25 @@ func load_game() -> bool:
 	return true
 
 
+func _process(delta: float) -> void:
+	if not autosave_enabled or get_tree().paused or get_tree().current_scene == null:
+		return
+	_since_save += delta
+	if _since_save >= AUTOSAVE_SECONDS:
+		save_game()
+
+
 func save_game() -> void:
+	_since_save = 0.0
 	for node in get_tree().get_nodes_in_group(PERSIST_GROUP):
 		if node.has_method("save_state"):
 			node.save_state(data)
 	data["settings"]["quality"] = GameState.quality
 	data["settings"]["locale"] = GameState.current_locale()
 	data["settings"]["rhythm_hits"] = GameState.rhythm_hits
+	if not persistent:
+		saved.emit()
+		return
 	var tmp := SAVE_PATH + ".tmp"
 	var f := FileAccess.open(tmp, FileAccess.WRITE)
 	if f == null:

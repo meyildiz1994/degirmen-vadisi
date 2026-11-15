@@ -46,6 +46,8 @@ func _ready() -> void:
 	SaveSystem.restore_persisted_nodes()
 	bridge.player = player
 	bridge.open_requested.connect(hud.open_repair)
+	for site: RepairSite in [bridge, mill.wall, mill.wheel]:
+		site.completed.connect(func(): ItemMemory.record_deed(GameState.inventory.tools, site.site_id); SaveSystem.save_game.call_deferred())
 	mill.wall.open_requested.connect(hud.open_repair)
 	mill.wheel.open_requested.connect(hud.open_repair)
 	var iron := Vector3(props.IRON_SPOT.x, 0, props.IRON_SPOT.y)

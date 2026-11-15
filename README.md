@@ -6,7 +6,7 @@ Hedef: Steam (PC / Steam Deck), Android, iOS.
 Tüm görseller kodla üretilir (primitive + SurfaceTool/ArrayMesh, shader, FastNoiseLite).
 Tek harici varlık: OFL lisanslı **Patrick Hand** fontu (`fonts/`).
 
-## Durum: Aşama 5 (değirmen duvarı, çark, final)
+## Durum: Aşama 6 (eşya hafızası, ayarlar, kayıt, başarımlar). Sesler en sona bırakıldı.
 
 | Sistem | Dosya |
 |---|---|
@@ -101,7 +101,19 @@ Sağlamlık ≥ 4 (meşe, bakır). Aks: Sağlamlık ≥ 6, Dayanıklılık ≥ 6
 Zayıf parça takılırsa yapı çalışır ama değirmende süreyle (duvar 50 sn, çark 40 sn) çatlar.
 Duvar ve çark ilk kez birlikte tamamlanınca final oynar (etkileşim tuşu ile geçilebilir); sonra serbest oyun.
 
-`/scripts/item_memory.gd` Aşama 6'da eklenecek.
+### Aşama 6: eşya hafızası, ayarlar, kayıt, başarımlar
+
+| Sistem | Dosya |
+|---|---|
+| Eşya hafızası: aşınma/koyulaşma, 50 kullanımda isim, geçmiş, tamir | `scripts/item_memory.gd`, `scripts/tool_item.gd` |
+| Heybede alet geçmişi ve tamir düğmesi (baş malzemesinden 1) | `scripts/ui/inventory_panel.gd` |
+| Ses ayarları (Müzik, Efektler, Doğa, Arayüz), duraklatma menüsünde | `scripts/ui/volume_settings.gd` |
+| Başarımlar bir kez açılır, kayda yazılır, Steam'e yeniden bildirilir | `autoload/platform_services.gd` |
+| Otomatik kayıt (90 sn, onarım bitince, kapanış, mobilde arka plan) | `autoload/save_system.gd` |
+
+İsim, aletin kimliğinden seçilen bir sıfat + malzeme + alet: "Yaşlı Taş Balta", "Loyal Iron Axe".
+Sıfat anahtar olarak saklanır, dil değişince isim de çevrilir. Geçmiş: "12 ağaç kesti, köprüyü onardı".
+Testler ve ekran görüntüsü aracı oyuncunun kaydını okumaz ve yazmaz.
 
 ## Sesler (ElevenLabs, yalnızca geliştirme sırasında)
 
