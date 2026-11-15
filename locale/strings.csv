@@ -127,10 +127,10 @@ PROP_WORKABILITY,İşlenme,Workability
 MAT_GOOD_FOR,İyi olduğu yer,Good for
 MAT_OAK_HINT,"Sağlam ve dengeli ağaç. Kiriş, bağlantı ve çark kanadı için iyi.","Strong, balanced wood. Good for beams, joints and wheel paddles."
 MAT_PINE_HINT,"Hafif ve kolay işlenir ama çabuk çürür. Saplar için iyi, kiriş için zayıf.","Light and easy to work, but rots fast. Good for handles, weak for beams."
-MAT_STONE_HINT,"Çok sert ve ağır, hiç esnemez. İlk balta ve kazma başı için iyi; kirişte kırılır.","Very hard and heavy, never bends. Good for first axe and pickaxe heads; snaps as a beam."
+MAT_STONE_HINT,"Çok sert ve ağır, hiç esnemez. İlk balta/kazma başı ve değirmen duvarı için iyi; kirişte kırılır.","Very hard and heavy, never bends. Good for first axe/pickaxe heads and the mill wall; snaps as a beam."
 MAT_COPPER_HINT,"Esnek, kolay işlenir ama yumuşak. Bağlantı ve dişli için iyi; alet ağzı çabuk körelir.",Flexible and workable but soft. Good for joints and gears; tool edges dull quickly.
-MAT_IRON_HINT,Sert ve dayanıklı. En iyi balta/kazma başı ve sağlam kirişler.,Hard and tough. The best axe/pickaxe heads and sturdy beams.
-MAT_CLAY_HINT,Yumuşak ve şekil alır. Değirmen duvarını örerken taşla birlikte kullanılacak.,Soft and shapeable. Will bind stones when rebuilding the mill wall.
+MAT_IRON_HINT,"Sert ve dayanıklı. En iyi balta/kazma başı, sağlam kiriş ve aks.","Hard and tough. The best axe/pickaxe heads, sturdy beams and axles."
+MAT_CLAY_HINT,"Yumuşak ve şekil alır. Duvar Taşı kalıbında harç olarak taşları en iyi o bağlar.",Soft and shapeable. As mortar in the Wall Block mold it binds stones best.
 MAT_REED_HINT,Çok hafif ve esnek. Hafif saplar için iyi; bağlantı olarak zayıf.,Very light and flexible. Good for light handles; weak as a joint.
 MAT_BRANCH_HINT,Hafif ve esnek. İlk aletlerin sapı için ideal.,Light and flexible. Ideal handles for your first tools.
 MOLD_HANDLE_DESC,Aletlerin sapı. Hafif ve esnek malzeme vuruşu hızlandırır.,"Tool handles. Light, flexible materials swing faster."
@@ -149,3 +149,39 @@ MSG_IRON_TOOL_MADE,Demir alet! Ağaçlar artık çok daha az vuruşta devriliyor
 TOOLBELT_EMPTY,Alet yok,No tools
 QUEST_MILL_NEXT,"Değirmenin çarkı kırık: kürekler, bir dişli ve bir mil gerekecek. Vadide dolaş, iyi malzeme biriktir.","The mill wheel is broken: it will need paddles, a gear and an axle. Roam the valley and stock up on good materials."
 MSG_MILL_SEEN,Değirmen seni bekliyor! Çarkı onarmak için kalıp atölyesinde kürek ve dişli kalıpları var.,The mill is waiting for you! The workshop has paddle and gear molds for the wheel.
+MOLD_BLOCK,Duvar Taşı,Wall Block
+MOLD_AXLE,Aks,Axle
+MOLD_BLOCK_DESC,"Yıkık duvar için örgü taşı. Gövdesi ağır ve sağlam, harcı iyi tutan bir malzeme olmalı (kil gibi).","A block for the crumbled wall. Heavy, strong body and a mortar that binds well (like clay)."
+MOLD_AXLE_DESC,"Çarkı duvara bağlayan mil. Sağlam ve dayanıklı olmalı.",The shaft joining the wheel to the wall. Must be strong and durable.
+SLOT_BODY,Gövde,Body
+SLOT_MORTAR,Harç,Mortar
+STAT_STABILITY,Ağırlık (oturma),Heft
+STAT_BOND,Bağlama,Bond
+STAT_SMOOTHNESS,Pürüzsüzlük,Smoothness
+NAME_MILL_WALL,Değirmenin Yıkık Duvarı,The Mill's Broken Wall
+NAME_MILL_WALL_FIXED,Değirmen Duvarı,Mill Wall
+NAME_MILL_WHEEL,Değirmen Çarkı,Mill Wheel
+NAME_MILL_WHEEL_FIXED,Dönen Çark,Turning Wheel
+REPAIR_WALL_LOW,Alt Sıra,Bottom Course
+REPAIR_WALL_MID,Orta Sıra,Middle Course
+REPAIR_WALL_TOP,Üst Sıra,Top Course
+REPAIR_AXLE,Aks,Axle
+REPAIR_GEAR,Dişli,Gear
+REPAIR_PADDLE_1,Kanat 1,Paddle 1
+REPAIR_PADDLE_2,Kanat 2,Paddle 2
+REPAIR_PADDLE_3,Kanat 3,Paddle 3
+REPAIR_PADDLE_4,Kanat 4,Paddle 4
+REPAIR_PADDLE_5,Kanat 5,Paddle 5
+REPAIR_PADDLE_6,Kanat 6,Paddle 6
+QUEST_REPAIR_WALL,"Değirmenin yıkık duvarını ör: atölyede Duvar Taşı kalıbı (gövde + harç).","Rebuild the mill's crumbled wall: use the Wall Block mold in the workshop (body + mortar)."
+QUEST_REPAIR_WHEEL,"Çarkı onar: 1 aks, 1 dişli ve 6 kanat.","Repair the wheel: 1 axle, 1 gear and 6 paddles."
+QUEST_VALLEY_DONE,"Vadi yeniden canlandı! Dilediğince dolaş, ağaç dik, yeni aletler dene.","The valley is alive again! Roam freely, plant trees, try new tools."
+MSG_WALL_DONE,Duvar yeniden ayakta!,The wall stands again!
+MSG_WHEEL_SPINS,Çark dönüyor!,The wheel is turning!
+MSG_MILL_CRACKED,"Zayıf bir parça çatladı: Onarım noktasında hangisi olduğunu görebilirsin.","A weak part cracked: the repair point shows which one."
+FINALE_TITLE,Değirmen yeniden dönüyor,The mill turns again
+FINALE_SUB,"Vadiyi kendi ellerinle onardın.",You restored the valley with your own hands.
+FINALE_SKIP,(geçmek için dokun),(tap to skip)
+ACH_MILL_WALL,Taş Üstüne Taş,Stone on Stone
+ACH_MILL_WHEEL,Su Yeniden Akar,Water Flows Again
+ACH_VALLEY_RESTORED,Değirmen Vadisi,Mill Valley

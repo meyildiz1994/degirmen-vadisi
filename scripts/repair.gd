@@ -43,6 +43,11 @@ static func needs(site_id: String, slot_id: String) -> Dictionary:
 	return slot_def(site_id, slot_id).get("needs", {})
 
 
+## Zamanla çatlayan yapılar (değirmen): zayıf parçalı yapı bu kadar saniye çalışınca çatlar. 0: yok.
+static func crack_after_seconds(site_id: String) -> float:
+	return float(site(site_id).get("crack_after_seconds", 0.0))
+
+
 static func crack_after() -> int:
 	_ensure()
 	return int(_data.get("crack_after_crossings", 2))
@@ -94,7 +99,7 @@ static func new_state(site_id: String) -> Dictionary:
 ## Kayıttan gelen durumu bugünkü yuva listesine uydur (eksik yuva eklenir, bilinmeyen atılır).
 static func sanitize(site_id: String, raw: Dictionary) -> Dictionary:
 	var st := new_state(site_id)
-	st["crossings"] = int(raw.get("crossings", 0))
+	st["crossings"] = float(raw.get("crossings", 0))
 	st["done"] = bool(raw.get("done", false))
 	var raw_slots: Dictionary = raw.get("slots", {})
 	for slot_id: String in st["slots"]:

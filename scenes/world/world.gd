@@ -9,7 +9,7 @@ const PLAYER_SPAWN := Vector2(-9.5, 9.5)
 
 @onready var vegetation: Node3D = $Vegetation
 @onready var props: Node3D = $ResourceProps
-@onready var mill: Node3D = $Mill
+@onready var mill: Mill = $Mill
 @onready var bridge: RepairSite = $Bridge
 @onready var workshop: Node3D = $Workshop
 @onready var player: Player = $Player
@@ -19,6 +19,7 @@ const PLAYER_SPAWN := Vector2(-9.5, 9.5)
 
 var gather_world: GatherWorld
 var tutorial: Tutorial
+var finale: Finale
 
 
 func _ready() -> void:
@@ -38,12 +39,18 @@ func _ready() -> void:
 	hud.bind_player(player)
 	_build_gathering()
 	player.focus_changed.connect(func(t): touch.set_interact_available(t != null))
+	finale = Finale.new()
+	finale.name = "Finale"
+	add_child(finale)
+	finale.setup(mill, player, hud, $Atmosphere)
 	SaveSystem.restore_persisted_nodes()
 	bridge.player = player
 	bridge.open_requested.connect(hud.open_repair)
+	mill.wall.open_requested.connect(hud.open_repair)
+	mill.wheel.open_requested.connect(hud.open_repair)
 	var iron := Vector3(props.IRON_SPOT.x, 0, props.IRON_SPOT.y)
 	iron.y = ValleyShape.height(iron.x, iron.z) + 0.8
-	tutorial.setup(hud, gather_world, workshop.interactable, player, bridge, mill.interactable, iron)
+	tutorial.setup(hud, gather_world, workshop.interactable, player, bridge, mill.interactable, iron, mill)
 	hud.quest_marker.tutorial = tutorial
 	AudioManager.play_music("music_explore")
 	if ScreenshotCapture.requested():
@@ -69,6 +76,7 @@ func _ground(x: float, z: float) -> Vector3:
 func _place_structures() -> void:
 	var mx := ValleyShape.river_x(MILL_Z) - ValleyShape.river_half_width(MILL_Z) - 4.0
 	mill.position = _ground(mx, MILL_Z) + Vector3(0, 0.05, 0)
+	mill.on_placed()
 	bridge.position = Vector3(ValleyShape.river_x(BRIDGE_Z), ValleyShape.water_y(BRIDGE_Z), BRIDGE_Z)
 	workshop.position = _ground(WORKSHOP_POS.x, WORKSHOP_POS.y) + Vector3(0, 0.1, 0)
 	workshop.rotation.y = 0.25

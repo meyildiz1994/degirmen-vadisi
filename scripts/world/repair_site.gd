@@ -20,6 +20,16 @@ func _ready() -> void:
 	state = Repair.new_state(site_id)
 
 
+## Zamanla çatlayan yapılarda: tamamlanmış ve zayıf parçalıysa çalışma süresini say.
+func _process(delta: float) -> void:
+	var limit := Repair.crack_after_seconds(site_id)
+	if limit <= 0.0 or not is_complete() or not Repair.has_weak(state) or get_tree().paused:
+		return
+	state["crossings"] = float(state.get("crossings", 0.0)) + delta
+	if state["crossings"] >= limit:
+		crack_weak_parts()
+
+
 func display_name_key() -> String:
 	return str(Repair.site(site_id).get("name", site_id))
 

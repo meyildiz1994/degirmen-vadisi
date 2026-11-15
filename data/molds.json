@@ -1,7 +1,7 @@
 {
 	"version": 1,
 	"comment": "Atölye kalıpları. Sabit tarif yok: her yuva kabul ettiği malzemelerden birini alır, sonuç istatistikleri formülle hesaplanır. terms: [yuva, özellik, ağırlık]; değer = const + toplam, 0-10 arasına sıkıştırılır.",
-	"order": ["handle", "axe_head", "pickaxe_head", "beam", "connector", "paddle", "gear"],
+	"order": ["handle", "axe_head", "pickaxe_head", "beam", "connector", "block", "paddle", "gear", "axle"],
 	"molds": {
 		"handle": {
 			"name": "MOLD_HANDLE", "icon": "mold_handle",
@@ -50,6 +50,19 @@
 				"durability":  {"name": "STAT_DURABILITY", "terms": [["material", "durability", 1.0]]}
 			}
 		},
+		"block": {
+			"name": "MOLD_BLOCK", "icon": "mold_block",
+			"slots": [
+				{"id": "body",   "name": "SLOT_BODY",   "accepts": ["stone", "iron", "oak", "pine", "copper"], "amount": 2},
+				{"id": "mortar", "name": "SLOT_MORTAR", "accepts": ["clay", "reed", "branch"], "amount": 1}
+			],
+			"output": {"kind": "part", "material_slot": "body"},
+			"stats": {
+				"strength":  {"name": "STAT_STRENGTH",  "terms": [["body", "hardness", 0.5], ["body", "durability", 0.5]]},
+				"stability": {"name": "STAT_STABILITY", "terms": [["body", "weight", 1.0]]},
+				"bond":      {"name": "STAT_BOND",      "terms": [["mortar", "workability", 0.6], ["mortar", "durability", 0.4]]}
+			}
+		},
 		"paddle": {
 			"name": "MOLD_PADDLE", "icon": "mold_paddle",
 			"slots": [{"id": "material", "name": "SLOT_MATERIAL", "accepts": ["oak", "pine", "stone", "copper", "iron"], "amount": 1}],
@@ -68,6 +81,16 @@
 				"precision":   {"name": "STAT_PRECISION",  "terms": [["material", "workability", 1.0]]},
 				"strength":    {"name": "STAT_STRENGTH",   "terms": [["material", "hardness", 0.6], ["material", "durability", 0.4]]},
 				"weight":      {"name": "STAT_WEIGHT",     "terms": [["material", "weight", 1.0]]}
+			}
+		},
+		"axle": {
+			"name": "MOLD_AXLE", "icon": "mold_axle",
+			"slots": [{"id": "material", "name": "SLOT_MATERIAL", "accepts": ["oak", "pine", "stone", "copper", "iron"], "amount": 2}],
+			"output": {"kind": "part"},
+			"stats": {
+				"strength":   {"name": "STAT_STRENGTH",   "terms": [["material", "hardness", 0.5], ["material", "durability", 0.5]]},
+				"durability": {"name": "STAT_DURABILITY", "terms": [["material", "durability", 1.0]]},
+				"smoothness": {"name": "STAT_SMOOTHNESS", "terms": [["material", "workability", 1.0]]}
 			}
 		}
 	}

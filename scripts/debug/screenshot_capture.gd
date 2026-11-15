@@ -155,6 +155,8 @@ func _gather_scenario() -> void:
 		cam.make_current()
 	if _args.has("anim"):
 		await _anim_pose(player, str(_args["anim"]))
+	if _args.has("mill_wall") or _args.has("mill_wheel") or _args.has("mill_open") or _args.has("finale"):
+		await _mill_scenario(world, player)
 	if _args.has("bridge") or _args.has("repair_open"):
 		await _bridge_scenario(world)
 	if _args.has("inventory_open"):
@@ -181,6 +183,50 @@ func _anim_pose(player: Player, spec: String) -> void:
 			t = 0.5
 	await get_tree().create_timer(t).timeout
 	m.set_process(false)
+
+
+## --mill_wall=stone,iron,-  (her sıra: gövde malzemesi + kil; "-" boş)
+## --mill_wheel=N  (ilk N yuva meşe/demir parçalarla) --mill_open=wall|wheel
+## --mill_cam=dx,dy,dz (değirmene göre kamera) --finale=sn (final sahnesi, o anda çek)
+func _mill_scenario(world: Node, player: Player) -> void:
+	var mill: Mill = world.get_node("Mill")
+	var inv := GameState.inventory
+	if _args.has("no_finale"):
+		world.finale.done = true  # sahne oynamasın, onarılmış hali göster
+		world.finale._light_step(1.0)
+		world.finale._motes_on()
+	var walls := str(_args.get("mill_wall", "")).split(",", false)
+	var ids := ["wall_low", "wall_mid", "wall_top"]
+	for i in mini(walls.size(), 3):
+		if walls[i] == "-":
+			continue
+		var key := "block:%s:clay" % walls[i]
+		inv.add_part(key, 1)
+		mill.wall.install(ids[i], key)
+	var n := int(_args.get("mill_wheel", "0"))
+	var slots := Repair.slots("mill_wheel")
+	for i in mini(n, slots.size()):
+		var id: String = slots[i]["id"]
+		var key := "axle:iron" if id == "axle" else ("gear:copper" if id == "gear" else "paddle:oak")
+		inv.add_part(key, 1)
+		mill.wheel.install(id, key)
+	for key: String in ["block:stone:clay", "block:stone:reed", "block:iron:clay", "paddle:oak", "paddle:pine", "gear:oak", "axle:oak"]:
+		inv.add_part(key, 2)
+	if _args.has("mill_open"):
+		var hud = world.get_node("HUD")
+		hud.open_repair(mill.wall if str(_args["mill_open"]) == "wall" else mill.wheel)
+	if _args.has("mill_cam"):
+		var v: PackedFloat64Array = str(_args["mill_cam"]).split_floats(",")
+		var cam := Camera3D.new()
+		cam.fov = 55.0
+		world.add_child(cam)
+		var focus := mill.wheel.global_position.lerp(mill.global_position, 0.4) + Vector3(0, 0.6, 0)
+		cam.look_at_from_position(mill.global_position + Vector3(v[0], v[1], v[2]), focus)
+		cam.make_current()
+	if _args.has("finale"):
+		world.finale.play()
+		await get_tree().create_timer(float(_args["finale"])).timeout
+		get_tree().paused = false
 
 
 func _bridge_scenario(world: Node) -> void:

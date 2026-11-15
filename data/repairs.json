@@ -1,15 +1,155 @@
 {
 	"version": 1,
-	"comment": "Onarım noktaları. Her yuva bir kalıp ister ve özellik eşikleri gösterir. Eşiği tutmayan parça da takılabilir; 'zayıf' olur ve oyuncu köprüyü crack_after_crossings kez geçtikten sonra çatlar.",
+	"comment": "Onarım noktaları. Her yuva bir kalıp ister ve özellik eşikleri gösterir. Eşiği tutmayan parça da takılabilir; 'zayıf' olur. Köprüde oyuncu crack_after_crossings kez geçince, değirmende yapı crack_after_seconds saniye çalışınca çatlar.",
 	"crack_after_crossings": 2,
 	"sites": {
 		"bridge": {
 			"name": "NAME_BRIDGE",
 			"achievement": "ACH_BRIDGE_REPAIRED",
 			"slots": [
-				{"id": "beam_north", "name": "REPAIR_BEAM_NORTH", "mold": "beam", "needs": {"strength": 5, "flexibility": 2}},
-				{"id": "beam_south", "name": "REPAIR_BEAM_SOUTH", "mold": "beam", "needs": {"strength": 5, "flexibility": 2}},
-				{"id": "link", "name": "REPAIR_LINK", "mold": "connector", "needs": {"strength": 4, "flexibility": 4}}
+				{
+					"id": "beam_north",
+					"name": "REPAIR_BEAM_NORTH",
+					"mold": "beam",
+					"needs": {
+						"strength": 5,
+						"flexibility": 2
+					}
+				},
+				{
+					"id": "beam_south",
+					"name": "REPAIR_BEAM_SOUTH",
+					"mold": "beam",
+					"needs": {
+						"strength": 5,
+						"flexibility": 2
+					}
+				},
+				{
+					"id": "link",
+					"name": "REPAIR_LINK",
+					"mold": "connector",
+					"needs": {
+						"strength": 4,
+						"flexibility": 4
+					}
+				}
+			]
+		},
+		"mill_wall": {
+			"name": "NAME_MILL_WALL",
+			"achievement": "ACH_MILL_WALL",
+			"crack_after_seconds": 50,
+			"slots": [
+				{
+					"id": "wall_low",
+					"name": "REPAIR_WALL_LOW",
+					"mold": "block",
+					"needs": {
+						"strength": 6,
+						"stability": 7,
+						"bond": 7
+					}
+				},
+				{
+					"id": "wall_mid",
+					"name": "REPAIR_WALL_MID",
+					"mold": "block",
+					"needs": {
+						"strength": 6,
+						"stability": 7,
+						"bond": 7
+					}
+				},
+				{
+					"id": "wall_top",
+					"name": "REPAIR_WALL_TOP",
+					"mold": "block",
+					"needs": {
+						"strength": 6,
+						"stability": 7,
+						"bond": 7
+					}
+				}
+			]
+		},
+		"mill_wheel": {
+			"name": "NAME_MILL_WHEEL",
+			"achievement": "ACH_MILL_WHEEL",
+			"crack_after_seconds": 40,
+			"slots": [
+				{
+					"id": "axle",
+					"name": "REPAIR_AXLE",
+					"mold": "axle",
+					"needs": {
+						"strength": 6,
+						"durability": 6
+					}
+				},
+				{
+					"id": "gear",
+					"name": "REPAIR_GEAR",
+					"mold": "gear",
+					"needs": {
+						"precision": 5,
+						"strength": 4
+					}
+				},
+				{
+					"id": "paddle_1",
+					"name": "REPAIR_PADDLE_1",
+					"mold": "paddle",
+					"needs": {
+						"lightness": 3,
+						"water": 6
+					}
+				},
+				{
+					"id": "paddle_2",
+					"name": "REPAIR_PADDLE_2",
+					"mold": "paddle",
+					"needs": {
+						"lightness": 3,
+						"water": 6
+					}
+				},
+				{
+					"id": "paddle_3",
+					"name": "REPAIR_PADDLE_3",
+					"mold": "paddle",
+					"needs": {
+						"lightness": 3,
+						"water": 6
+					}
+				},
+				{
+					"id": "paddle_4",
+					"name": "REPAIR_PADDLE_4",
+					"mold": "paddle",
+					"needs": {
+						"lightness": 3,
+						"water": 6
+					}
+				},
+				{
+					"id": "paddle_5",
+					"name": "REPAIR_PADDLE_5",
+					"mold": "paddle",
+					"needs": {
+						"lightness": 3,
+						"water": 6
+					}
+				},
+				{
+					"id": "paddle_6",
+					"name": "REPAIR_PADDLE_6",
+					"mold": "paddle",
+					"needs": {
+						"lightness": 3,
+						"water": 6
+					}
+				}
 			]
 		}
 	}

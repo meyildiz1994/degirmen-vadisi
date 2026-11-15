@@ -49,11 +49,11 @@ func _left_column() -> Control:
 	vb.custom_minimum_size = Vector2(250, 0)
 	vb.add_child(_section("WORKSHOP_MOLDS"))
 	_mold_list = VBoxContainer.new()
-	_mold_list.add_theme_constant_override("separation", 4)
+	_mold_list.add_theme_constant_override("separation", 3)
 	vb.add_child(_mold_list)
 	for id: String in Crafting.mold_ids():
 		var b := Button.new()
-		b.custom_minimum_size = Vector2(240, 58)
+		b.custom_minimum_size = Vector2(240, 48)  # 9 kalıp sığsın; dokunma hedefi ≥ 48
 		b.toggle_mode = true
 		b.pressed.connect(select_mold.bind(id))
 		var row := HBoxContainer.new()
@@ -63,11 +63,12 @@ func _left_column() -> Control:
 		row.add_theme_constant_override("separation", 10)
 		var ic := ItemIcon.new()
 		ic.icon = str(Crafting.mold(id).get("icon", "lump"))
-		ic.custom_minimum_size = Vector2(50, 50)
+		ic.custom_minimum_size = Vector2(44, 44)
+		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(ic)
 		var l := Label.new()
 		l.text = str(Crafting.mold(id).get("name", id))
-		l.add_theme_font_size_override("font_size", 25)
+		l.add_theme_font_size_override("font_size", 22)
 		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(l)
 		b.add_child(row)

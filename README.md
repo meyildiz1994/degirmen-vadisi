@@ -6,7 +6,7 @@ Hedef: Steam (PC / Steam Deck), Android, iOS.
 Tüm görseller kodla üretilir (primitive + SurfaceTool/ArrayMesh, shader, FastNoiseLite).
 Tek harici varlık: OFL lisanslı **Patrick Hand** fontu (`fonts/`).
 
-## Durum: Aşama 4 (köprü onarımı) — oyun testi için durak
+## Durum: Aşama 5 (değirmen duvarı, çark, final)
 
 | Sistem | Dosya |
 |---|---|
@@ -84,6 +84,23 @@ Onarım bitince `ACH_BRIDGE_REPAIRED` başarımı açılır, görev demir damar�
 Oyuncu bir ağaca/kayaya yaklaşınca uygun aleti kendiliğinden eline alır; aletin başı malzemesinin rengindedir.
 Vuruşta gövde öne atılır ve ezilir (yay-sönüm), kamera çok hafif sarsılır, kaya basılıp geri gelir.
 
+### Aşama 5: değirmen duvarı, çark ve final
+
+| Sistem | Dosya |
+|---|---|
+| Yeni kalıplar: Duvar Taşı (gövde + harç), Aks | `data/molds.json` |
+| Onarım yerleri: duvar (3 sıra), çark (aks + dişli + 6 kanat) | `data/repairs.json` |
+| Çok yuvalı parçalar ("block:stone:clay") | `scripts/crafting.gd` |
+| Yıkık duvar, sıra sıra örülür | `scenes/world/mill_wall.gd`, `scripts/world/stone_wall.gd` |
+| Çark: eğik/kırık → doğrulur, kanatlar takılır, döner, su sıçratır | `scenes/world/mill_wheel.gd` |
+| Final sahnesi (kamera, ışık, pencere, ışık tozları, final müziği) | `scripts/world/finale.gd` |
+
+Duvar: Sağlamlık ≥ 6, Ağırlık ≥ 7, Bağlama ≥ 7 → taş (ya da demir) gövde + kil harç. Saz/dal harç zayıf.
+Çark kanadı: Hafiflik ≥ 3, Suya dayanım ≥ 6 → yalnız meşe (taş ağır, çam çürür). Dişli: Hassasiyet ≥ 5,
+Sağlamlık ≥ 4 (meşe, bakır). Aks: Sağlamlık ≥ 6, Dayanıklılık ≥ 6 (meşe, demir, taş).
+Zayıf parça takılırsa yapı çalışır ama değirmende süreyle (duvar 50 sn, çark 40 sn) çatlar.
+Duvar ve çark ilk kez birlikte tamamlanınca final oynar (etkileşim tuşu ile geçilebilir); sonra serbest oyun.
+
 `/scripts/item_memory.gd` Aşama 6'da eklenecek.
 
 ## Sesler (ElevenLabs, yalnızca geliştirme sırasında)
@@ -129,6 +146,8 @@ godot --path . -- --screenshot=user://shot.png --quality=2 --locale=tr
 godot --path . -- --screenshot=user://wide.png --cam=16,9,18,-3,0.5,-10
 godot --path . -- --screenshot=user://anim.png --give=1 --player=-9.5,9.5,90 --side_cam=4 --anim=strike:0.02
 godot --path . -- --screenshot=user://made.png --workshop=axe_head,iron,handle:branch --craft=1
+godot --path . -- --screenshot=user://mill.png --mill_cam=7,2.6,4.5 --mill_wall=stone,stone,- --mill_wheel=3
+godot --path . -- --screenshot=user://final.png --mill_wall=stone,stone,stone --mill_wheel=8 --finale=6
 ```
 
 ## Gizli anahtarlar

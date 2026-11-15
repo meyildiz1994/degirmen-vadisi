@@ -99,6 +99,8 @@ func _draw() -> void:
 		"mold_connector": _connector(c, k, col, ink)
 		"mold_paddle": _paddle(c, k, col, ink)
 		"mold_gear": _gear(c, k, col, ink)
+		"mold_block": _block(c, k, col, ink)
+		"mold_axle": _axle(c, k, col, ink)
 		_: _lump(c, k, col, ink)
 
 
@@ -366,6 +368,30 @@ func _gear(c: Vector2, k: float, col: Color, ink: Color) -> void:
 	_poly(pts, col, ink, 2.0 * k)
 	draw_circle(c, 5.0 * k, Color(Palette.PAPER, col.a))
 	draw_arc(c, 5.0 * k, 0, TAU, 14, ink, 1.5 * k, true)
+
+
+## Duvar taşı: üst üste iki sıra blok, aralarında harç çizgisi.
+func _block(c: Vector2, k: float, col: Color, ink: Color) -> void:
+	col = _neutral(col)
+	var mortar := Color(Palette.CLAY.lightened(0.3), col.a)
+	for row in 2:
+		var y := (-14.0 + row * 14.0)
+		var off := 0.0 if row == 0 else -8.0
+		for i in 2:
+			var r := Rect2(c + Vector2(-18 + off + i * 18, y) * k, Vector2(17, 12) * k)
+			draw_rect(r, col.lightened(0.08 * i))
+			draw_rect(r, ink, false, 1.8 * k)
+	draw_line(c + Vector2(-20, -1) * k, c + Vector2(20, -1) * k, mortar, 2.0 * k)
+
+
+## Aks: uzun silindir, uçlarında halka.
+func _axle(c: Vector2, k: float, col: Color, ink: Color) -> void:
+	col = _neutral(col)
+	draw_line(c + Vector2(-19, 10) * k, c + Vector2(19, -10) * k, ink, 10.0 * k)
+	draw_line(c + Vector2(-19, 10) * k, c + Vector2(19, -10) * k, col, 7.0 * k)
+	for p: Vector2 in [Vector2(-13, 7), Vector2(13, -7)]:
+		draw_circle(c + p * k, 6.0 * k, ink)
+		draw_circle(c + p * k, 4.5 * k, col.darkened(0.15))
 
 
 ## Kemerli küçük köprü: iki ayak, kalas sırası, altında su çizgisi.

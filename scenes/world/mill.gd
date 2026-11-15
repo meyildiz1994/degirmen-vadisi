@@ -1,9 +1,14 @@
+class_name Mill
 extends Node3D
-## Bozuk su değirmeni: taş gövde (bir duvarı yarım), çökmüş çatı, kırık çark.
-## Gövde tek mesh; çark ayrı düğüm (Aşama 5'te onarılıp dönecek).
+## Bozuk su değirmeni: taş gövde, çökmüş çatı. Onarılabilir iki parça kodla eklenir:
+## dere tarafındaki yıkık duvar (MillWall) ve çark (MillWheel). Pencerede, değirmen
+## çalışınca yanan sıcak bir ışık var (final).
 
-@onready var wheel: Node3D = $Wheel
 @onready var interactable: Interactable = $Interactable
+
+var wall: MillWall
+var wheel: MillWheel
+var window_glow: MeshInstance3D
 
 const WALL_T := 0.45
 const SIZE := Vector3(4.4, 3.0, 4.0)
@@ -22,7 +27,43 @@ func _ready() -> void:
 	sb.set_meta("surface", "stone")
 	sb.add_child(_shape(body.mesh))
 	add_child(sb)
-	_build_wheel()
+	wall = MillWall.new()
+	wall.name = "Wall"
+	wall.size = SIZE
+	add_child(wall)
+	wheel = MillWheel.new()
+	wheel.name = "Wheel"
+	wheel.position = wheel_local_center()
+	add_child(wheel)
+	_build_window_glow()
+
+
+## Pencere ışığı: başta kapalı; set_glow(1) ile yanar.
+func _build_window_glow() -> void:
+	window_glow = MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(0.7, 0.6, 0.05)
+	window_glow.mesh = bm
+	window_glow.position = Vector3(0.6, 1.9, SIZE.z * 0.5 + 0.25)
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.albedo_color = Color(Palette.SUNSET_LIGHT.lightened(0.3), 0.0)
+	window_glow.material_override = m
+	window_glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(window_glow)
+	var light := OmniLight3D.new()
+	light.name = "WindowLight"
+	light.light_color = Palette.SUNSET_LIGHT
+	light.light_energy = 0.0
+	light.omni_range = 2.6
+	light.position = window_glow.position + Vector3(0, 0, 1.1)
+	add_child(light)
+
+
+func set_glow(v: float) -> void:
+	(window_glow.material_override as StandardMaterial3D).albedo_color.a = v
+	($WindowLight as OmniLight3D).light_energy = v * 0.45
 
 
 func _shape(mesh: Mesh) -> CollisionShape3D:
@@ -69,7 +110,8 @@ func _build_body() -> ArrayMesh:
 	_stone_wall(kit, Vector3(-hx, 0.1, -hz), Vector3.RIGHT, SIZE.x, SIZE.y)
 	_stone_wall(kit, Vector3(-hx, 0.1, hz), Vector3.RIGHT, SIZE.x, SIZE.y)
 	_stone_wall(kit, Vector3(-hx, 0.1, -hz), Vector3.BACK, SIZE.z, SIZE.y)
-	_stone_wall(kit, Vector3(hx, 0.1, -hz), Vector3.BACK, SIZE.z, SIZE.y, true)
+	# Doğu duvarı: yalnız en alt sıra sabit; üstü MillWall (onarılabilir).
+	StoneWall.rows(kit, _rng, Vector3(hx, 0.1, -hz), Vector3.BACK, SIZE.z, 0, 0)
 	# Kapı (batı yüzünde koyu boşluk) ve pencere
 	kit.box(Vector3(-hx - 0.2, 1.0, 0.4), Vector3(0.08, 1.8, 1.0), Palette.WOOD_DARK)
 	kit.box(Vector3(-hx - 0.24, 1.0, 0.4), Vector3(0.05, 1.9, 0.12), Palette.WOOD)
@@ -102,56 +144,15 @@ func _build_body() -> ArrayMesh:
 	# Yıkık duvarın döküntü taşları
 	for i in 6:
 		kit.box(Vector3(hx + _rng.randf_range(0.2, 1.0), 0.15, _rng.randf_range(-1.5, 1.5)), Vector3(0.45, 0.3, 0.4) * _rng.randf_range(0.7, 1.1), _stone(), Vector3(_rng.randf(), _rng.randf() * 3.0, _rng.randf()))
-	# Aks (duvardan çarka)
-	kit.cylinder(Vector3(hx + 0.8, wheel_local_center().y, 0), 0.12, 0.12, 2.0, Palette.WOOD_DARK, Vector3(0, 0, PI * 0.5), 8)
 	return kit.commit()
+
+
+## Dünya değirmeni yerleştirdikten sonra çağırır: çark su seviyesine göre konur.
+func on_placed() -> void:
+	wheel.position = wheel_local_center()
 
 
 func wheel_local_center() -> Vector3:
 	var ground := global_position.y
 	var water := ValleyShape.water_y(global_position.z)
 	return Vector3(SIZE.x * 0.5 + 1.55, water - ground + 0.75, 0)
-
-
-## Kırık çark: eksik kanatlar, kopuk jant parçaları, hafif eğik.
-func _build_wheel() -> void:
-	wheel.position = wheel_local_center()
-	wheel.rotation = Vector3(0.0, 0.0, 0.1)
-	var kit := MeshKit.new()
-	var R := 1.7
-	var segs := 16
-	kit.cylinder(Vector3.ZERO, 0.32, 0.32, 0.6, Palette.WOOD_DARK, Vector3(0, 0, PI * 0.5), 10)
-	for side: float in [-0.24, 0.24]:
-		for i in segs:
-			if i == 5 or i == 6 or (side > 0 and i == 11):
-				continue  # kopuk jant
-			var a := TAU * i / segs + PI / segs
-			var r := Vector3(0, cos(a), sin(a))
-			kit.box(r * R + Vector3(side, 0, 0), Vector3(0.12, 0.14, TAU * R / segs + 0.05), Palette.WOOD.lerp(Palette.WOOD_OLD, 0.4), Vector3(a, 0, 0))
-	for i in 8:
-		var a := TAU * i / 8.0
-		var r := Vector3(0, cos(a), sin(a))
-		var spoke_len := R if i != 3 else R * 0.45  # kırık kol
-		for side: float in [-0.2, 0.2]:
-			kit.box(r * spoke_len * 0.5 + Vector3(side, 0, 0), Vector3(0.09, spoke_len, 0.1), Palette.WOOD_DARK, Vector3(a, 0, 0))
-	var missing := [2, 3, 7, 8, 12]
-	for i in 14:
-		if i in missing:
-			continue
-		var a := TAU * i / 14.0
-		var r := Vector3(0, cos(a), sin(a))
-		var tilt := _rng.randf_range(-0.12, 0.12) if i % 3 == 0 else 0.0
-		kit.box(r * (R + 0.18), Vector3(0.62, 0.5, 0.06), Palette.WOOD_OLD.lerp(Palette.WOOD, _rng.randf() * 0.5), Vector3(a + tilt, 0, 0))
-	var mi := MeshInstance3D.new()
-	mi.mesh = kit.commit()
-	mi.material_override = WatercolorMaterials.vertex_colored(true)
-	wheel.add_child(mi)
-	# Suya düşmüş bir kanat
-	var drift := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = Vector3(0.62, 0.06, 0.5)
-	drift.mesh = bm
-	drift.material_override = WatercolorMaterials.object(Palette.WOOD_OLD)
-	drift.position = wheel.position + Vector3(0.9, -0.62, 2.1)
-	drift.rotation = Vector3(0.1, 0.7, 0.05)
-	add_child(drift)
