@@ -30,6 +30,7 @@ func setup(h: CanvasLayer, gather_world: GatherWorld, workshop: Interactable, p:
 	GameState.inventory.changed.connect(_refresh)
 	gather_world.resource_gathered.connect(_on_gathered)
 	workshop.interacted.connect(_on_workshop)
+	h.workshop_panel.crafted.connect(func(_m, _r): _refresh())
 	workshop.message_key = ""
 	workshop.action_key = "ACTION_USE"
 	_advance_if_ready()
@@ -37,15 +38,44 @@ func setup(h: CanvasLayer, gather_world: GatherWorld, workshop: Interactable, p:
 	_refresh()
 
 
+## İlk taş balta ve kazma için gereken toplam (heybedeki saplar düşülür).
+## Sap kalıbı 1 dal, baş kalıbı 2 taş + 1 sap ister (data/molds.json).
 func _needed() -> Dictionary:
-	var total := {}
+	var inv := GameState.inventory
+	var heads := 0
 	for kind: String in ["axe", "pickaxe"]:
-		if GameState.inventory.has_tool(kind):
-			continue
-		var cost: Dictionary = Materials.first_tool_recipe(kind).get("cost", {})
-		for id in cost:
-			total[id] = int(total.get(id, 0)) + int(cost[id])
+		if not inv.has_tool(kind):
+			heads += 1
+	var handles_have := 0
+	for key: String in inv.parts:
+		if Crafting.part_mold(key) == "handle":
+			handles_have += inv.part_count(key)
+	var total := {}
+	if heads > 0:
+		total["stone"] = heads * Crafting.slot_amount("axe_head", 0)
+		var branches := maxi(heads - handles_have, 0)
+		if branches > 0:
+			total["branch"] = branches
 	return total
+
+
+## Atölyede nabız gibi atacak kalıp (eğitim).
+func _mold_to_highlight() -> String:
+	if GameState.tutorial_step != Step.CRAFT:
+		return ""
+	var inv := GameState.inventory
+	var handles := 0
+	for key: String in inv.parts:
+		if Crafting.part_mold(key) == "handle":
+			handles += inv.part_count(key)
+	var heads_left := int(not inv.has_tool("axe")) + int(not inv.has_tool("pickaxe"))
+	if handles < heads_left and handles == 0:
+		return "handle"
+	if not inv.has_tool("axe"):
+		return "axe_head"
+	if not inv.has_tool("pickaxe"):
+		return "pickaxe_head"
+	return ""
 
 
 func _set_step(s: int) -> void:
@@ -53,6 +83,10 @@ func _set_step(s: int) -> void:
 		return
 	GameState.tutorial_step = s
 	GameState.set_quest(QUESTS[s])
+	if s == Step.USE and hud != null:
+		hud.show_toast("MSG_FIRST_TOOLS")
+		# Aletler heybede: heybe tuşunu da göster.
+		hud.hint_card.flash(["axe", "pickaxe", "arrow", "inventory"], 3.5)
 
 
 func _advance_if_ready() -> void:
@@ -73,6 +107,8 @@ func _advance_if_ready() -> void:
 
 func _refresh() -> void:
 	_advance_if_ready()
+	if hud.workshop_panel:
+		hud.workshop_panel.set_highlight(_mold_to_highlight())
 	var card: IconHintCard = hud.hint_card
 	match GameState.tutorial_step:
 		Step.MOVE:
@@ -86,7 +122,7 @@ func _refresh() -> void:
 				items.append([id, "%d/%d" % [mini(GameState.inventory.count(id), need[id]), need[id]]])
 			card.set_persistent(items)
 		Step.CRAFT:
-			card.set_persistent(["branch", "plus", "stone", "arrow", "workshop", "arrow", "axe", "pickaxe"])
+			card.set_persistent(["workshop", "arrow", "mold_handle", "plus", "stone", "arrow", "axe", "pickaxe"])
 		Step.USE:
 			card.set_persistent([["axe", "", _chopped], "arrow", ["tree", "", _chopped], ["pickaxe", "", _mined], "arrow", ["rock", "", _mined]])
 		_:
@@ -101,33 +137,10 @@ func _on_gathered(resource_id: String) -> void:
 	_refresh()
 
 
-## Atölye: Aşama 3'te kalıplı üretim arayüzü açılacak. Şimdilik ilk aletleri yapar.
+## Atölye her zaman kalıp panelini açar; eğitimdeyken doğru kalıp nabız gibi atar.
 func _on_workshop(_by: Node) -> void:
-	var made := []
-	for kind: String in ["axe", "pickaxe"]:
-		if GameState.inventory.has_tool(kind):
-			continue
-		var r := Materials.first_tool_recipe(kind)
-		if GameState.inventory.spend(r.get("cost", {})):
-			GameState.inventory.add_tool(ToolItem.create(kind, str(r.get("head", "stone")), str(r.get("handle", "branch"))))
-			made.append(kind)
-	if not made.is_empty():
-		AudioManager.play_sfx("craft_success")
-		hud.show_toast("MSG_FIRST_TOOLS")
-		# Aletler heybede: heybe tuşunu da göster.
-		hud.hint_card.flash(made + ["arrow", "inventory"], 3.5)
-	elif not _needed().is_empty():
-		AudioManager.play_sfx("craft_fail")
-		var items: Array = []
-		var need := _needed()
-		for id: String in need:
-			items.append([id, "%d/%d" % [mini(GameState.inventory.count(id), need[id]), need[id]]])
-		items.append("arrow")
-		items.append("workshop")
-		hud.hint_card.flash(items, 3.0)
-	else:
-		hud.show_toast("MSG_WORKSHOP")
-	_refresh()
+	hud.workshop_panel.set_highlight(_mold_to_highlight())
+	hud.open_workshop()
 
 
 ## Yürüme ve bakma adımları: oyuncunun gerçekten yürüdüğü ve kamerayı çevirdiği ölçülür.

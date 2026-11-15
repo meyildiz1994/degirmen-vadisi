@@ -114,6 +114,20 @@ func _gather_scenario() -> void:
 			player.gather.on_interact_pressed(focus_g)
 		player.gather.set_physics_process(false)
 		player.gather.cycle = player.gather.swing * float(_args["ring"])
+	if _args.has("workshop"):
+		# --workshop=kalıp[,seçim1,seçim2]  örn. axe_head,iron,handle:oak
+		var parts := str(_args["workshop"]).split(",")
+		var inv := GameState.inventory
+		for id: String in ["iron", "copper", "oak", "pine", "stone"]:
+			inv.add(id, 6)
+		inv.add_part("handle:oak", 1)
+		inv.add_part("handle:branch", 2)
+		var hud = world.get_node("HUD")
+		hud.open_workshop()
+		hud.workshop_panel.select_mold(parts[0])
+		for i in range(1, parts.size()):
+			hud.workshop_panel.active_slot = i - 1
+			hud.workshop_panel.choose(parts[i])
 	if _args.has("inventory_open"):
 		world.get_node("HUD").toggle_inventory()
 

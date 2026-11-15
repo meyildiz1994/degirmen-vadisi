@@ -139,6 +139,11 @@ func _rebuild() -> void:
 		if inv.count(id) > 0:
 			_grid.add_child(_item_cell(id, inv.count(id)))
 			shown += 1
+	var keys := inv.parts.keys()
+	keys.sort()
+	for key: String in keys:
+		_grid.add_child(_item_cell(key, inv.part_count(key)))
+		shown += 1
 	_empty_label.visible = shown == 0
 	for t in inv.tools:
 		_tools_box.add_child(_tool_row(t))
@@ -162,7 +167,7 @@ func _item_cell(id: String, n: int) -> Control:
 	cnt.add_theme_font_size_override("font_size", 26)
 	vb.add_child(cnt)
 	var name_l := Label.new()
-	name_l.text = Materials.display_name(id)
+	name_l.text = Crafting.part_name(id) if ":" in id else tr(Materials.display_name(id))
 	name_l.add_theme_font_size_override("font_size", 18)
 	name_l.modulate.a = 0.8
 	vb.add_child(name_l)

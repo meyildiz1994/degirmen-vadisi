@@ -1,0 +1,74 @@
+{
+	"version": 1,
+	"comment": "Atölye kalıpları. Sabit tarif yok: her yuva kabul ettiği malzemelerden birini alır, sonuç istatistikleri formülle hesaplanır. terms: [yuva, özellik, ağırlık]; değer = const + toplam, 0-10 arasına sıkıştırılır.",
+	"order": ["handle", "axe_head", "pickaxe_head", "beam", "connector", "paddle", "gear"],
+	"molds": {
+		"handle": {
+			"name": "MOLD_HANDLE", "icon": "mold_handle",
+			"slots": [{"id": "material", "name": "SLOT_MATERIAL", "accepts": ["branch", "oak", "pine", "reed", "copper", "iron"], "amount": 1}],
+			"output": {"kind": "part"},
+			"stats": {
+				"flexibility": {"name": "STAT_FLEX",       "terms": [["material", "flexibility", 1.0]]},
+				"lightness":   {"name": "STAT_LIGHTNESS",  "terms": [["material", "weight", -1.0]], "const": 10},
+				"durability":  {"name": "STAT_DURABILITY", "terms": [["material", "durability", 1.0]]}
+			}
+		},
+		"axe_head": {
+			"name": "MOLD_AXE_HEAD", "icon": "axe",
+			"slots": [
+				{"id": "head",   "name": "SLOT_HEAD",   "accepts": ["stone", "copper", "iron", "oak"], "amount": 2},
+				{"id": "handle", "name": "SLOT_HANDLE", "part": "handle", "amount": 1}
+			],
+			"output": {"kind": "tool", "tool": "axe"}
+		},
+		"pickaxe_head": {
+			"name": "MOLD_PICKAXE_HEAD", "icon": "pickaxe",
+			"slots": [
+				{"id": "head",   "name": "SLOT_HEAD",   "accepts": ["stone", "copper", "iron", "oak"], "amount": 2},
+				{"id": "handle", "name": "SLOT_HANDLE", "part": "handle", "amount": 1}
+			],
+			"output": {"kind": "tool", "tool": "pickaxe"}
+		},
+		"beam": {
+			"name": "MOLD_BEAM", "icon": "mold_beam",
+			"slots": [{"id": "material", "name": "SLOT_MATERIAL", "accepts": ["oak", "pine", "stone", "copper", "iron"], "amount": 2}],
+			"output": {"kind": "part"},
+			"stats": {
+				"durability":  {"name": "STAT_DURABILITY", "terms": [["material", "durability", 1.0]]},
+				"strength":    {"name": "STAT_STRENGTH",   "terms": [["material", "hardness", 0.5], ["material", "durability", 0.5]]},
+				"weight":      {"name": "STAT_WEIGHT",     "terms": [["material", "weight", 1.0]]},
+				"flexibility": {"name": "STAT_FLEX",       "terms": [["material", "flexibility", 1.0]]}
+			}
+		},
+		"connector": {
+			"name": "MOLD_CONNECTOR", "icon": "mold_connector",
+			"slots": [{"id": "material", "name": "SLOT_MATERIAL", "accepts": ["reed", "oak", "copper", "iron"], "amount": 1}],
+			"output": {"kind": "part"},
+			"stats": {
+				"strength":    {"name": "STAT_STRENGTH",   "terms": [["material", "hardness", 0.6], ["material", "durability", 0.4]]},
+				"flexibility": {"name": "STAT_FLEX",       "terms": [["material", "flexibility", 1.0]]},
+				"durability":  {"name": "STAT_DURABILITY", "terms": [["material", "durability", 1.0]]}
+			}
+		},
+		"paddle": {
+			"name": "MOLD_PADDLE", "icon": "mold_paddle",
+			"slots": [{"id": "material", "name": "SLOT_MATERIAL", "accepts": ["oak", "pine", "stone", "copper", "iron"], "amount": 1}],
+			"output": {"kind": "part"},
+			"stats": {
+				"lightness":   {"name": "STAT_LIGHTNESS",  "terms": [["material", "weight", -1.0]], "const": 10},
+				"water":       {"name": "STAT_WATER",      "terms": [["material", "durability", 1.0], ["material", "workability", -0.15]], "const": 0.6},
+				"durability":  {"name": "STAT_DURABILITY", "terms": [["material", "durability", 1.0]]}
+			}
+		},
+		"gear": {
+			"name": "MOLD_GEAR", "icon": "mold_gear",
+			"slots": [{"id": "material", "name": "SLOT_MATERIAL", "accepts": ["oak", "pine", "stone", "copper", "iron"], "amount": 2}],
+			"output": {"kind": "part"},
+			"stats": {
+				"precision":   {"name": "STAT_PRECISION",  "terms": [["material", "workability", 1.0]]},
+				"strength":    {"name": "STAT_STRENGTH",   "terms": [["material", "hardness", 0.6], ["material", "durability", 0.4]]},
+				"weight":      {"name": "STAT_WEIGHT",     "terms": [["material", "weight", 1.0]]}
+			}
+		}
+	}
+}

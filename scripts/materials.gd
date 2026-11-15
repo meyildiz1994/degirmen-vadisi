@@ -10,7 +10,6 @@ static var _materials := {}
 static var _seeds := {}
 static var _resources := {}
 static var _tools := {}
-static var _first_tools := {}
 static var gathering := {}
 
 
@@ -23,7 +22,6 @@ static func _ensure() -> void:
 	var r := _load_json(RESOURCES_PATH)
 	_resources = r.get("resources", {})
 	_tools = r.get("tools", {})
-	_first_tools = r.get("first_tools", {})
 	gathering = r.get("gathering", {})
 
 
@@ -87,11 +85,6 @@ static func resource(id: String) -> Dictionary:
 static func tool_name_key(kind: String) -> String:
 	_ensure()
 	return str(_tools.get(kind, {}).get("name", kind))
-
-
-static func first_tool_recipe(kind: String) -> Dictionary:
-	_ensure()
-	return _first_tools.get(kind, {})
 
 
 static func tune(key: String, fallback: float) -> float:

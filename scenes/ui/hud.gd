@@ -31,6 +31,7 @@ var rhythm_ring: RhythmRing
 var pickup_feed: PickupFeed
 var hint_card: IconHintCard
 var inventory_panel: InventoryPanel
+var workshop_panel: WorkshopPanel
 
 
 func _ready() -> void:
@@ -95,6 +96,25 @@ func _build_gather_ui() -> void:
 	add_child(inventory_panel)
 	move_child(inventory_panel, pause_menu.get_index())
 	inventory_panel.closed.connect(_on_inventory_closed)
+	workshop_panel = WorkshopPanel.new()
+	workshop_panel.name = "WorkshopPanel"
+	add_child(workshop_panel)
+	move_child(workshop_panel, pause_menu.get_index())
+	workshop_panel.closed.connect(_on_inventory_closed)
+
+
+func open_workshop() -> void:
+	if workshop_panel.is_open:
+		return
+	if inventory_panel.is_open:
+		inventory_panel.close_panel()
+	AudioManager.play_ui("panel_open")
+	InputManager.release_mouse()
+	if player:
+		player.input_enabled = false
+		player.gather.stop()
+	hint_panel.visible = false
+	workshop_panel.open_panel()
 
 
 func _on_tool_missing(kind: String, _g: Gatherable) -> void:
@@ -118,6 +138,7 @@ func _on_inventory_closed() -> void:
 	AudioManager.play_ui("panel_close")
 	if player:
 		player.input_enabled = true
+	_refresh_hint()
 
 
 ## Yeni görev: metni güncelle, ikonda bildirim rozeti ve kısa "Yeni görev!" balonu göster.
@@ -213,6 +234,8 @@ func set_paused(paused: bool) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if workshop_panel.is_open:
+		return  # atölye kendi girişini yönetir
 	if event.is_action_pressed("pause") and inventory_panel.is_open:
 		inventory_panel.close_panel()
 		get_viewport().set_input_as_handled()
