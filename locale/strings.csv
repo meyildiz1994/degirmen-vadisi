@@ -1,0 +1,28 @@
+keys,tr,en
+GAME_TITLE,Değirmen Vadisi,Mill Valley
+QUEST_TITLE,Görev,Task
+NEW_QUEST,Yeni görev!,New task!
+QUEST_EXPLORE,Vadiyi keşfet ve eski değirmeni bul.,Explore the valley and find the old mill.
+ACTION_INSPECT,İncele,Inspect
+ACTION_USE,Kullan,Use
+NAME_UNKNOWN,???,???
+NAME_MILL,Eski Su Değirmeni,Old Water Mill
+NAME_BRIDGE,Yıkık Köprü,Broken Bridge
+NAME_WORKSHOP,Atölye,Workshop
+MSG_MILL,"Çarkın kanatları kırık, duvarı yarım kalmış. Bir gün yeniden dönecek.","The wheel's paddles are broken and a wall has crumbled. One day it will turn again."
+MSG_BRIDGE,Kirişler çürümüş. Karşı kıyıya geçmek için köprü onarılmalı.,The beams have rotted. The bridge must be repaired to reach the far bank.
+MSG_BRIDGE_FAR,Karşı kıyıda kızıl taşlar parlıyor... demir mi?,Reddish stones glint on the far bank... iron?
+MSG_WORKSHOP,Tozlu ama sağlam bir tezgâh. Yakında burada üretim yapacaksın.,"A dusty but sturdy workbench. Soon you'll craft here."
+MSG_INVENTORY_SOON,Heybe şimdilik boş.,Your satchel is empty for now.
+PAUSED,Duraklatıldı,Paused
+RESUME,Devam et,Resume
+QUALITY,Grafik,Graphics
+QUALITY_LOW,Düşük,Low
+QUALITY_MEDIUM,Orta,Medium
+QUALITY_HIGH,Yüksek,High
+LANGUAGE,Dil,Language
+TOUCH_INTERACT,Etkileşim,Interact
+TOUCH_INVENTORY,Heybe,Bag
+TOUCH_PREVIEW_OFF,Dokunmatik önizleme: kapalı (F2),Touch preview: off (F2)
+TOUCH_PREVIEW_ON,Dokunmatik önizleme: açık (F2),Touch preview: on (F2)
+HINT_CLICK_TO_LOOK,Etrafa bakmak için oyun alanına tıkla,Click the game view to look around

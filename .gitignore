@@ -1,0 +1,19 @@
+# Godot
+.godot/
+/android/
+*.translation
+export/
+build/
+
+# Gizli anahtarlar — ASLA commit etme
+.env
+.env.*
+
+# Python araçları
+tools/.venv/
+tools/__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db

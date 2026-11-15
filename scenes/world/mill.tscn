@@ -1,0 +1,16 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/world/mill.gd" id="1_mill"]
+[ext_resource type="Script" path="res://scripts/world/interactable.gd" id="2_int"]
+
+[node name="Mill" type="Node3D"]
+script = ExtResource("1_mill")
+
+[node name="Wheel" type="Node3D" parent="."]
+
+[node name="Interactable" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8, 0, 0.4)
+script = ExtResource("2_int")
+display_name_key = "NAME_MILL"
+message_key = "MSG_MILL"
+radius = 3.2
