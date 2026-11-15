@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/workshop/workshop_hut.gd" id="1_hut"]
+[ext_resource type="Script" path="res://scripts/world/interactable.gd" id="2_int"]
+
+[node name="Workshop" type="Node3D"]
+script = ExtResource("1_hut")
+
+[node name="Interactable" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.8, 0, 0)
+script = ExtResource("2_int")
+display_name_key = "NAME_WORKSHOP"
+action_key = "ACTION_USE"
+message_key = "MSG_WORKSHOP"
+radius = 2.6

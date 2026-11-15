@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/world/bridge.gd" id="1_bridge"]
+[ext_resource type="Script" path="res://scripts/world/interactable.gd" id="2_int"]
+
+[node name="Bridge" type="Node3D"]
+script = ExtResource("1_bridge")
+
+[node name="InteractableWest" type="Node3D" parent="."]
+script = ExtResource("2_int")
+display_name_key = "NAME_BRIDGE"
+message_key = "MSG_BRIDGE"
+radius = 3.0
+
+[node name="InteractableEast" type="Node3D" parent="."]
+script = ExtResource("2_int")
+display_name_key = "NAME_BRIDGE"
+message_key = "MSG_BRIDGE_FAR"
+radius = 3.0

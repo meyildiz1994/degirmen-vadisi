@@ -1,0 +1,49 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://scenes/world/world.gd" id="1_world"]
+[ext_resource type="Script" path="res://scripts/world/atmosphere.gd" id="2_atmo"]
+[ext_resource type="Script" path="res://scripts/world/valley_terrain.gd" id="3_terrain"]
+[ext_resource type="Script" path="res://scripts/world/river_water.gd" id="4_water"]
+[ext_resource type="Script" path="res://scripts/world/vegetation.gd" id="5_veg"]
+[ext_resource type="Script" path="res://scripts/world/resource_props.gd" id="6_props"]
+[ext_resource type="PackedScene" path="res://scenes/world/mill.tscn" id="7_mill"]
+[ext_resource type="PackedScene" path="res://scenes/world/bridge.tscn" id="8_bridge"]
+[ext_resource type="PackedScene" path="res://scenes/workshop/workshop.tscn" id="9_workshop"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="10_player"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="11_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/touch_controls.tscn" id="12_touch"]
+[ext_resource type="PackedScene" path="res://scenes/ui/screen_effect.tscn" id="13_fx"]
+
+[node name="World" type="Node3D"]
+script = ExtResource("1_world")
+
+[node name="Atmosphere" type="Node3D" parent="."]
+script = ExtResource("2_atmo")
+
+[node name="Terrain" type="StaticBody3D" parent="."]
+script = ExtResource("3_terrain")
+
+[node name="River" type="MeshInstance3D" parent="."]
+script = ExtResource("4_water")
+
+[node name="Vegetation" type="Node3D" parent="."]
+script = ExtResource("5_veg")
+
+[node name="ResourceProps" type="Node3D" parent="."]
+script = ExtResource("6_props")
+
+[node name="Mill" parent="." instance=ExtResource("7_mill")]
+
+[node name="Bridge" parent="." instance=ExtResource("8_bridge")]
+
+[node name="Workshop" parent="." instance=ExtResource("9_workshop")]
+
+[node name="Ambience" type="Node3D" parent="."]
+
+[node name="Player" parent="." instance=ExtResource("10_player")]
+
+[node name="ScreenEffect" parent="." instance=ExtResource("13_fx")]
+
+[node name="TouchLayer" parent="." instance=ExtResource("12_touch")]
+
+[node name="HUD" parent="." instance=ExtResource("11_hud")]
