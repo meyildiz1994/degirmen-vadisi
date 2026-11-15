@@ -16,6 +16,11 @@ const STRIKE_HOLD := 0.07     ## çarpma duraksaması (hit-stop)
 const STRIKE_FOLLOW := 0.12
 const STRIKE_TOTAL := 0.42
 const PICKUP_TIME := 0.62
+## Bilek açısı (aletin kola göre dönüşü). Taşırken ileri-aşağı, çarpmada kolla aynı
+## çizgide hedefe, kurulunca başın arkasına.
+const WRIST_CARRY := 2.0
+const WRIST_CONTACT := 1.45
+const WRIST_COCKED := 2.9
 
 var arm_pivot: Node3D
 var _rig: Node3D
@@ -69,6 +74,7 @@ func _ready() -> void:
 	_tool_mi.visible = false
 	_tool_root.add_child(_tool_mi)
 	arm_pivot.rotation.x = ARM_IDLE
+	_tool_root.rotation.x = WRIST_CARRY
 
 
 func _legs_mesh() -> ArrayMesh:
@@ -113,8 +119,9 @@ func _tool_mesh(kind: String, head: String) -> ArrayMesh:
 	var kit := MeshKit.new()
 	kit.cylinder(Vector3(0, 0, 0.3), 0.025, 0.03, 0.72, Palette.WOOD, Vector3(PI * 0.5, 0, 0), 6)
 	if kind == "axe":
-		kit.box(Vector3(0, -0.07, 0.6), Vector3(0.07, 0.2, 0.12), c)
-		kit.prism(Vector3(0, -0.2, 0.6), Vector3(0.06, 0.1, 0.18), c.lightened(0.2), Vector3(PI, 0, 0))
+		# Ağız sapın +Y tarafında: vuruşta hareket yönüne (hedefe) bakar.
+		kit.box(Vector3(0, 0.07, 0.6), Vector3(0.07, 0.2, 0.12), c)
+		kit.prism(Vector3(0, 0.2, 0.6), Vector3(0.06, 0.1, 0.18), c.lightened(0.2))
 		kit.box(Vector3(0, 0.0, 0.6), Vector3(0.08, 0.06, 0.06), Palette.REED)  # bağ
 	else:
 		kit.box(Vector3(0, 0, 0.62), Vector3(0.07, 0.07, 0.1), Palette.REED)
@@ -177,13 +184,16 @@ func _process(delta: float) -> void:
 	var lean_goal := 0.0
 	var crouch_goal := 0.0
 	var arm := ARM_IDLE if _held == "" else 0.35
+	var wrist := WRIST_CARRY
 	if _windup >= 0.0:
 		var w := smoothstep(0.05, 0.95, _windup)
 		arm = lerpf(ARM_CONTACT, ARM_RAISED, w)
+		wrist = lerpf(WRIST_CONTACT, WRIST_COCKED, w)
 		lean_goal = 0.16 * w          # kurulurken geriye yaslanır
 		crouch_goal = -0.03 * w
 	if _strike_t >= 0.0:
 		arm = _strike_arm(delta)
+		wrist = WRIST_CONTACT
 		lean_goal = -0.22
 	if _pickup_t >= 0.0:
 		var pk := _pickup_pose(delta)
@@ -193,7 +203,9 @@ func _process(delta: float) -> void:
 	# Kol: vuruşta doğrudan, diğer durumlarda yumuşak.
 	if _strike_t >= 0.0:
 		arm_pivot.rotation.x = arm
+		_tool_root.rotation.x = lerpf(_tool_root.rotation.x, wrist, clampf(delta * 40.0, 0.0, 1.0))
 	else:
+		_tool_root.rotation.x = lerpf(_tool_root.rotation.x, wrist, clampf(delta * 14.0, 0.0, 1.0))
 		arm_pivot.rotation.x = lerpf(arm_pivot.rotation.x, arm, clampf(delta * 16.0, 0.0, 1.0))
 	_springs(delta, lean_goal, crouch_goal)
 
