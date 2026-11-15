@@ -15,6 +15,11 @@ func check(cond: bool, msg: String) -> void:
 		print("  FAIL ", msg)
 
 
+func _frames(n: int) -> void:
+	for i in n:
+		await get_tree().process_frame
+
+
 func _ready() -> void:
 	_run.call_deferred()
 
@@ -33,6 +38,20 @@ func _run() -> void:
 	stone_axe.durability = 0
 	check(stone_axe.hits_for("oak_tree") > 5, "körelmiş alet daha yavaş")
 
+	print("== kalıplar")
+	var pine := Crafting.stats_for_part("paddle:pine")
+	var oak := Crafting.stats_for_part("paddle:oak")
+	var stone := Crafting.stats_for_part("paddle:stone")
+	check(Crafting.stat_value(pine, "water") < Crafting.stat_value(oak, "water"), "çam kanat suya meşeden az dayanır (çürür)")
+	check(Crafting.stat_value(stone, "lightness") < 2.0, "taş kanat çok ağır (çark dönmez)")
+	check(Crafting.stat_value(oak, "lightness") >= 3.5 and Crafting.stat_value(oak, "water") >= 6.0, "meşe kanat dengeli")
+	var st_axe := Crafting.predict("axe_head", ["stone", "handle:pine"])
+	var cu_axe := Crafting.predict("axe_head", ["copper", "handle:pine"])
+	var fe_axe := Crafting.predict("axe_head", ["iron", "handle:pine"])
+	check(Crafting.stat_value(fe_axe, "power") > Crafting.stat_value(st_axe, "power"), "demir başlı balta en güçlü")
+	check(Crafting.stat_value(cu_axe, "durability") < Crafting.stat_value(st_axe, "durability"), "bakır başlı çabuk körelir")
+	check(Crafting.stat_value(st_axe, "weight") > Crafting.stat_value(cu_axe, "weight"), "taş başlı ağır")
+	check(Crafting.predict("beam", [""]).is_empty(), "boş yuvada tahmin yok")
 	print("== heybe")
 	var inv := Inventory.new()
 	inv.add("oak", 3)
@@ -79,11 +98,20 @@ func _run() -> void:
 	player.gather.tool_missing.connect(func(_k, _g): missing[0] = true)
 	player.gather.on_interact_pressed(tree)
 	check(missing[0] and not player.gather.active(), "baltasız ağaç: metinsiz uyarı")
-	# Eğitim: atölyede ilk aletler
+	# Eğitim: atölyede kalıplarla ilk aletler (sap → balta başı / kazma başı)
 	gs.inventory.add("stone", 3)
 	gs.inventory.add("branch", 2)
 	world.workshop.interactable.interact(player)
-	check(gs.inventory.has_tool("axe") and gs.inventory.has_tool("pickaxe"), "atölyede ilk taş aletler yapıldı")
+	var wp: WorkshopPanel = world.hud.workshop_panel
+	check(wp.is_open and wp.highlight_mold == "handle", "atölye paneli açıldı, Sap kalıbı vurgulu")
+	check(not Crafting.craft(gs.inventory, "axe_head", ["stone", ""]).size(), "eksik yuvayla üretilmez")
+	check(Crafting.craft(gs.inventory, "handle", ["branch"]).get("key", "") == "handle:branch", "dal sap yapıldı")
+	check(Crafting.craft(gs.inventory, "handle", ["branch"]).size() > 0, "ikinci sap")
+	check(Crafting.craft(gs.inventory, "axe_head", ["stone", "handle:branch"]).get("kind", "") == "tool", "taş balta kalıpla yapıldı")
+	check(Crafting.craft(gs.inventory, "pickaxe_head", ["stone", "handle:branch"]).get("kind", "") == "tool", "taş kazma kalıpla yapıldı")
+	await get_tree().process_frame
+	wp.close_panel()
+	check(gs.inventory.has_tool("axe") and gs.inventory.has_tool("pickaxe") and gs.inventory.count("stone") == 0, "aletler heybede, taşlar harcandı")
 	check(gs.tutorial_step == 4, "eğitim 'kullan' adımında (%d)" % gs.tutorial_step)
 	# Ritim: tatlı vuruş 2x
 	player.global_position = tree.global_position + Vector3(1.5, 0, 0)
@@ -109,13 +137,11 @@ func _run() -> void:
 	gw.save_state(data)
 	check(data["world"]["resources"].has(tree.save_id), "kesilen ağaç kayda girdi")
 	# Yeniden büyüme
-	tree.timer = 0.01
-	await get_tree().process_frame
-	await get_tree().process_frame
+	tree.timer = 0.0
+	await _frames(10)
 	check(tree.state == Gatherable.State.GROWING, "kütükten fidan çıktı")
-	tree.timer = 0.01
-	await get_tree().process_frame
-	await get_tree().process_frame
+	tree.timer = 0.0
+	await _frames(10)
 	check(tree.state == Gatherable.State.READY, "fidan ağaç oldu")
 	gw.load_state(data)
 	check(tree.state == Gatherable.State.DEPLETED, "kayıttan kütük olarak yüklendi")

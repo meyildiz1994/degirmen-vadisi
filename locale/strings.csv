@@ -69,7 +69,31 @@ RHYTHM_HITS,Ritim vuruşu,Rhythm hits
 ON,Açık,On
 OFF,Kapalı,Off
 QUEST_FIRST_GATHER,Etraftan dal ve küçük taş topla.,Gather branches and small stones nearby.
-QUEST_FIRST_TOOLS,"Atölyeye git, ilk taş baltanı ve kazmanı yap.",Go to the workshop and make your first stone axe and pickaxe.
+QUEST_FIRST_TOOLS,"Atölyede önce bir sap, sonra taş balta ve taş kazma yap.","At the workshop, make a handle, then a stone axe and a stone pickaxe."
 QUEST_USE_TOOLS,"Baltayla bir ağaç kes, kazmayla bir kaya kır.",Chop a tree with the axe and break a boulder with the pickaxe.
 MSG_FIRST_TOOLS,Taş balta ve taş kazma hazır! Halka daireye değdiğinde bas.,Stone axe and pickaxe ready! Press when the ring meets the circle.
 QUEST_WELCOME,Vadiye hoş geldin! Biraz dolaş ve etrafına bak.,Welcome to the valley! Walk around and look about.
+MOLD_HANDLE,Sap,Handle
+MOLD_AXE_HEAD,Balta Başı,Axe Head
+MOLD_PICKAXE_HEAD,Kazma Başı,Pickaxe Head
+MOLD_BEAM,Kiriş,Beam
+MOLD_CONNECTOR,Bağlantı,Connector
+MOLD_PADDLE,Çark Kanadı,Wheel Paddle
+MOLD_GEAR,Dişli,Gear
+SLOT_MATERIAL,Malzeme,Material
+SLOT_HEAD,Baş,Head
+SLOT_HANDLE,Sap,Handle
+STAT_DURABILITY,Dayanıklılık,Durability
+STAT_SPEED,Hız,Speed
+STAT_FLEX,Esneklik,Flexibility
+STAT_LIGHTNESS,Hafiflik,Lightness
+STAT_STRENGTH,Sağlamlık,Strength
+STAT_WATER,Suya dayanım,Water resistance
+STAT_PRECISION,Hassasiyet,Precision
+WORKSHOP_MOLDS,Kalıplar,Molds
+WORKSHOP_PREDICTION,Tahmin,Prediction
+WORKSHOP_CRAFT,Üret,Craft
+WORKSHOP_CHOOSE,Seç,Choose
+WORKSHOP_MADE,Yapıldı,Made
+WORKSHOP_FILL_SLOTS,"Yuvalara malzeme koy, sonucu burada gör.",Put materials in the slots to see the result here.
+WORKSHOP_NEED_HANDLE,Önce Sap kalıbıyla bir sap yap.,Make a handle with the Handle mold first.

@@ -10,6 +10,7 @@ signal tool_added(tool: ToolItem)
 const TOOL_SLOTS := 6
 
 var items := {}                    ## id -> adet (malzeme + tohum)
+var parts := {}                    ## "kalıp:malzeme" -> adet (atölye parçaları, yığılır)
 var tools: Array[ToolItem] = []
 
 
@@ -68,6 +69,26 @@ func first_seed() -> String:
 	return ""
 
 
+# --- Parçalar (kiriş, sap, bağlantı...) ---------------------------------------------
+func part_count(key: String) -> int:
+	return int(parts.get(key, 0))
+
+
+func add_part(key: String, amount := 1) -> void:
+	parts[key] = part_count(key) + amount
+	changed.emit()
+
+
+func remove_part(key: String, amount := 1) -> bool:
+	if part_count(key) < amount:
+		return false
+	parts[key] = part_count(key) - amount
+	if parts[key] <= 0:
+		parts.erase(key)
+	changed.emit()
+	return true
+
+
 # --- Aletler ---------------------------------------------------------------------
 func tool_slots_free() -> int:
 	return TOOL_SLOTS - tools.size()
@@ -112,7 +133,7 @@ func to_dict() -> Dictionary:
 	var tl := []
 	for t in tools:
 		tl.append(t.to_dict())
-	return {"items": items.duplicate(), "tools": tl}
+	return {"items": items.duplicate(), "parts": parts.duplicate(), "tools": tl}
 
 
 func from_dict(d: Dictionary) -> void:
@@ -121,6 +142,11 @@ func from_dict(d: Dictionary) -> void:
 	for id in src:
 		if Materials.is_material(id) or Materials.is_seed(id):
 			items[id] = int(src[id])
+	parts.clear()
+	var ps: Dictionary = d.get("parts", {})
+	for key in ps:
+		if Crafting.mold(str(key).get_slice(":", 0)).size() > 0 and Materials.is_material(str(key).get_slice(":", 1)):
+			parts[key] = int(ps[key])
 	tools.clear()
 	for td in d.get("tools", []):
 		if typeof(td) == TYPE_DICTIONARY:

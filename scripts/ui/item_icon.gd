@@ -35,12 +35,16 @@ func _ready() -> void:
 func _shape() -> String:
 	if Engine.is_editor_hint():
 		return icon
+	if ":" in icon:  # parça: "beam:oak" → kalıbın şekli, malzemenin rengi
+		return str(Crafting.mold(icon.get_slice(":", 0)).get("icon", "lump"))
 	if Materials.is_material(icon) or Materials.is_seed(icon):
 		return Materials.icon(icon)
 	return icon
 
 
 func _color() -> Color:
+	if not Engine.is_editor_hint() and ":" in icon:
+		return Materials.color(icon.get_slice(":", 1)) * tint
 	if not Engine.is_editor_hint() and (Materials.is_material(icon) or Materials.is_seed(icon)):
 		return Materials.color(icon) * tint
 	return tint
@@ -84,6 +88,11 @@ func _draw() -> void:
 		"workshop": _workshop(c, k, ink, a)
 		"tree": _tree(c, k, ink, a)
 		"hand": _hand(c, k, ink, a)
+		"mold_handle": _handle_icon(c, k, col, ink)
+		"mold_beam": _beam(c, k, col, ink)
+		"mold_connector": _connector(c, k, col, ink)
+		"mold_paddle": _paddle(c, k, col, ink)
+		"mold_gear": _gear(c, k, col, ink)
 		_: _lump(c, k, col, ink)
 
 
@@ -301,3 +310,53 @@ func _mouse(c: Vector2, k: float, ink: Color, a: float) -> void:
 	for s: float in [-1.0, 1.0]:
 		var tip := c + Vector2(s * 25.0, 0) * k
 		draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-s * 7, -5) * k, tip + Vector2(-s * 7, 5) * k]), ink)
+
+
+# --- Kalıp / parça ikonları (renk = malzeme; kalıp listesinde nötr ahşap) ---------------
+func _neutral(col: Color) -> Color:
+	return Color(Palette.WOOD_OLD, col.a) if icon.begins_with("mold_") else col
+
+
+func _handle_icon(c: Vector2, k: float, col: Color, ink: Color) -> void:
+	col = _neutral(col)
+	draw_line(c + Vector2(-14, 15) * k, c + Vector2(13, -14) * k, ink, 8.0 * k)
+	draw_line(c + Vector2(-14, 15) * k, c + Vector2(13, -14) * k, col, 5.0 * k)
+	draw_line(c + Vector2(-10, 11) * k, c + Vector2(-5, 6) * k, Color(Palette.REED, col.a), 6.0 * k)
+
+
+func _beam(c: Vector2, k: float, col: Color, ink: Color) -> void:
+	col = _neutral(col)
+	var pts := PackedVector2Array([c + Vector2(-20, -2) * k, c + Vector2(14, -10) * k, c + Vector2(20, -4) * k, c + Vector2(-14, 4) * k])
+	_poly(pts, col.lightened(0.15), ink, 2.0 * k)
+	var front := PackedVector2Array([c + Vector2(-14, 4) * k, c + Vector2(20, -4) * k, c + Vector2(20, 4) * k, c + Vector2(-14, 12) * k])
+	_poly(front, col, ink, 2.0 * k)
+	draw_line(c + Vector2(-8, 8) * k, c + Vector2(12, 3) * k, Color(ink, ink.a * 0.4), 1.2 * k)
+
+
+func _connector(c: Vector2, k: float, col: Color, ink: Color) -> void:
+	col = _neutral(col)
+	draw_arc(c + Vector2(-6, 0) * k, 10.0 * k, 0, TAU, 20, ink, 6.5 * k, true)
+	draw_arc(c + Vector2(-6, 0) * k, 10.0 * k, 0, TAU, 20, col, 4.0 * k, true)
+	draw_arc(c + Vector2(7, 0) * k, 10.0 * k, 0, TAU, 20, ink, 6.5 * k, true)
+	draw_arc(c + Vector2(7, 0) * k, 10.0 * k, 0, TAU, 20, col, 4.0 * k, true)
+
+
+func _paddle(c: Vector2, k: float, col: Color, ink: Color) -> void:
+	col = _neutral(col)
+	draw_line(c + Vector2(0, 18) * k, c + Vector2(0, -2) * k, ink, 5.0 * k)
+	var blade := Rect2(c + Vector2(-11, -18) * k, Vector2(22, 20) * k)
+	draw_rect(blade, col)
+	draw_rect(blade, ink, false, 2.0 * k)
+	draw_line(c + Vector2(-6, -14) * k, c + Vector2(-6, -2) * k, Color(ink, ink.a * 0.35), 1.2 * k)
+
+
+func _gear(c: Vector2, k: float, col: Color, ink: Color) -> void:
+	col = _neutral(col)
+	var pts := PackedVector2Array()
+	for i in 24:
+		var ang := TAU * i / 24.0
+		var r := (17.0 if i % 3 != 0 else 12.5) * k
+		pts.append(c + Vector2(cos(ang), sin(ang)) * r)
+	_poly(pts, col, ink, 2.0 * k)
+	draw_circle(c, 5.0 * k, Color(Palette.PAPER, col.a))
+	draw_arc(c, 5.0 * k, 0, TAU, 14, ink, 1.5 * k, true)

@@ -34,10 +34,5 @@
 	"tools": {
 		"axe":     {"name": "TOOL_AXE",     "gathers": ["oak_tree", "pine_tree"]},
 		"pickaxe": {"name": "TOOL_PICKAXE", "gathers": ["boulder", "copper_vein", "iron_vein"]}
-	},
-	"first_tools": {
-		"comment": "Eğitim: ilk taş balta ve taş kazma. Aşama 3'te kalıp sistemiyle değişir; istatistikler yine formülden gelir.",
-		"axe":     {"head": "stone", "handle": "branch", "cost": {"stone": 2, "branch": 1}},
-		"pickaxe": {"head": "stone", "handle": "branch", "cost": {"stone": 2, "branch": 1}}
 	}
 }
