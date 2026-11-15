@@ -19,6 +19,7 @@ extends CanvasLayer
 @onready var language_button: Button = %LanguageButton
 @onready var touch_button: Button = %TouchPreviewButton
 @onready var rhythm_button: Button = %RhythmButton
+var volume_settings: VolumeSettings
 @onready var root: Control = $SafeArea/Root
 
 var player: Player
@@ -60,8 +61,38 @@ func _ready() -> void:
 	rhythm_button.pressed.connect(func(): AudioManager.play_ui("ui_click"); GameState.set_rhythm_hits(not GameState.rhythm_hits))
 	GameState.rhythm_changed.connect(func(_e): _refresh_buttons())
 	_build_gather_ui()
+	_build_settings_column()
 	_on_quest_changed(GameState.current_quest_key)
 	_refresh_buttons()
+
+
+## Duraklatma menüsü iki sütun: solda düğmeler, sağda ses ayarları.
+func _build_settings_column() -> void:
+	var panel := pause_menu.get_node("Panel")
+	var buttons: Control = panel.get_node("VBox")
+	var cols := HBoxContainer.new()
+	cols.add_theme_constant_override("separation", 30)
+	panel.remove_child(buttons)
+	panel.add_child(cols)
+	cols.add_child(buttons)
+	var sep := ColorRect.new()
+	sep.color = Color(Palette.EARTH, 0.3)
+	sep.custom_minimum_size = Vector2(3, 0)
+	cols.add_child(sep)
+	volume_settings = VolumeSettings.new()
+	volume_settings.alignment = BoxContainer.ALIGNMENT_CENTER
+	cols.add_child(volume_settings)
+	_fit_pause_panel.call_deferred()
+
+
+## Panel sahnede sabit boyutlu; iki sütuna göre ortalanmış hâle getir.
+func _fit_pause_panel() -> void:
+	var panel: Control = pause_menu.get_node("Panel")
+	var ms := panel.get_combined_minimum_size()
+	panel.offset_left = -ms.x * 0.5
+	panel.offset_right = ms.x * 0.5
+	panel.offset_top = -ms.y * 0.5
+	panel.offset_bottom = ms.y * 0.5
 
 
 func bind_player(p: Player) -> void:
@@ -75,6 +106,7 @@ func bind_player(p: Player) -> void:
 	p.gather.session_ended.connect(_refresh_hint)
 	p.gather.hit_landed.connect(func(_g, _s): _refresh_hint.call_deferred())
 	p.gather.tool_missing.connect(_on_tool_missing)
+	p.gather.tool_named.connect(_on_tool_named)
 
 
 ## Toplama arayüzü kodla kurulur: vuruş halkası, toplama kartları, metinsiz ipucu, heybe.
@@ -162,6 +194,13 @@ func modal_open() -> bool:
 func _on_achievement(id: String) -> void:
 	var text := "%s: %s" % [tr("ACHIEVEMENT_UNLOCKED"), tr(id)]
 	get_tree().create_timer(4.2).timeout.connect(show_toast.bind(text, 3.5))
+
+
+## Eşya hafızası: alet 50 kullanımda isim kazanır.
+func _on_tool_named(t: ToolItem) -> void:
+	AudioManager.play_sfx("tool_named")
+	show_toast(tr("MSG_TOOL_NAMED") % t.display_name(), 4.5)
+	hint_card.flash([t.kind, "arrow", "check"], 2.5)
 
 
 func _on_tool_missing(kind: String, _g: Gatherable) -> void:
@@ -274,6 +313,7 @@ func set_paused(paused: bool) -> void:
 	pause_menu.visible = paused
 	AudioManager.play_ui("panel_open" if paused else "panel_close")
 	if paused:
+		_fit_pause_panel()
 		InputManager.release_mouse()
 		InputManager.release_all_virtual()
 		resume_button.grab_focus()

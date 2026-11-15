@@ -29,6 +29,7 @@ var _tool_mesh_cache := {}
 var _tool_mi: MeshInstance3D
 var _held := ""
 var _held_head := ""
+var _held_wear := 0
 var _windup := -1.0           ## <0: oturum yok
 var _strike_t := -1.0
 var _strike_sweet := false
@@ -111,11 +112,12 @@ func _arm_mesh() -> ArrayMesh:
 
 
 ## Sap elden ileri (+Z yerel) uzanır; vuruş anında aşağıyı gösterir. Baş rengi = malzeme.
-func _tool_mesh(kind: String, head: String) -> ArrayMesh:
-	var key := kind + ":" + head
+func _tool_mesh(kind: String, head: String, wear := 0) -> ArrayMesh:
+	var key := "%s:%s:%d" % [kind, head, wear]
 	if _tool_mesh_cache.has(key):
 		return _tool_mesh_cache[key]
 	var c := Palette.STONE if head == "stone" or not Materials.is_material(head) else Materials.color(head)
+	c = c.darkened(0.11 * wear)  # eşya hafızası: çok kullanılan alet koyulaşır
 	var kit := MeshKit.new()
 	kit.cylinder(Vector3(0, 0, 0.3), 0.025, 0.03, 0.72, Palette.WOOD, Vector3(PI * 0.5, 0, 0), 6)
 	if kind == "axe":
@@ -133,15 +135,16 @@ func _tool_mesh(kind: String, head: String) -> ArrayMesh:
 
 
 # --- Dış arayüz --------------------------------------------------------------------------
-func set_held_tool(kind: String, head := "stone") -> void:
-	if kind == _held and head == _held_head:
+func set_held_tool(kind: String, head := "stone", wear := 0) -> void:
+	if kind == _held and head == _held_head and wear == _held_wear:
 		return
+	_held_wear = wear
 	var appeared := _held == "" and kind != ""
 	_held = kind
 	_held_head = head
 	_tool_mi.visible = kind != ""
 	if kind != "":
-		_tool_mi.mesh = _tool_mesh(kind, head)
+		_tool_mi.mesh = _tool_mesh(kind, head, wear)
 	if appeared:
 		# Alet ele gelince küçük bir "pop".
 		_tool_root.scale = Vector3.ONE * 0.4

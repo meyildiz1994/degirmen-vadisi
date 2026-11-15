@@ -159,8 +159,31 @@ func _gather_scenario() -> void:
 		await _mill_scenario(world, player)
 	if _args.has("bridge") or _args.has("repair_open"):
 		await _bridge_scenario(world)
+	if _args.has("tool_memory"):
+		_aged_tools()
 	if _args.has("inventory_open"):
 		world.get_node("HUD").toggle_inventory()
+	if _args.has("pause"):
+		world.get_node("HUD").set_paused(true)
+
+
+## --tool_memory=1: heybedeki ilk alet yaşlanmış, isim kazanmış, geçmişli ve aşınmış.
+func _aged_tools() -> void:
+	var tools := GameState.inventory.tools
+	if tools.is_empty():
+		return
+	var t: ToolItem = tools[0]
+	t.uses = 64
+	t.durability = int(t.max_durability * 0.35)
+	ItemMemory.maybe_name(t)
+	for i in 12:
+		ItemMemory.record_gather(t, "oak_tree")
+	ItemMemory.record_deed([t], "bridge")
+	if tools.size() > 1:
+		tools[1].uses = 18
+		for i in 3:
+			ItemMemory.record_gather(tools[1], "boulder")
+	GameState.inventory.notify_tool_changed()
 
 
 ## --anim=strike:0.05 | pickup:0.25 | windup:0.9 — pozu o anda dondur (animasyon karesi).

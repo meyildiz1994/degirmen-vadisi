@@ -9,6 +9,7 @@ signal session_started(target: Gatherable, tool: ToolItem)
 signal session_ended
 signal hit_landed(target: Gatherable, sweet: bool)
 signal tool_missing(kind: String, target: Gatherable)
+signal tool_named(tool: ToolItem)
 
 const SWEET_EARLY := 0.13    ## halka hedefe değmeden önceki tolerans (sn)
 const SWEET_LATE := 0.11     ## değdikten sonraki tolerans (sn)
@@ -126,6 +127,8 @@ func _hit(sweet: bool) -> void:
 	if sweet:
 		amount *= Materials.tune("sweet_progress", 2.0)
 	tool.wear(1)
+	if ItemMemory.maybe_name(tool):
+		tool_named.emit(tool)
 	GameState.inventory.notify_tool_changed()
 	player.play_swing(sweet)
 	if target is TreeGatherable:
@@ -136,4 +139,6 @@ func _hit(sweet: bool) -> void:
 
 
 func _on_target_depleted(_drops: Dictionary) -> void:
+	if tool != null and target != null:
+		ItemMemory.record_gather(tool, target.resource_id)
 	stop()

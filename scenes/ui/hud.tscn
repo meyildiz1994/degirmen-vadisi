@@ -250,6 +250,7 @@ grow_vertical = 2
 script = ExtResource("3_panel")
 padding = Vector2(40, 30)
 blob_seed = 3.3
+card = true
 
 [node name="VBox" type="VBoxContainer" parent="PauseMenu/Panel"]
 layout_mode = 2
