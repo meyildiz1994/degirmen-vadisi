@@ -21,7 +21,7 @@ func _build_sun() -> void:
 	sun = DirectionalLight3D.new()
 	sun.name = "Sun"
 	sun.light_color = Color(1.0, 0.93, 0.82)
-	sun.light_energy = 1.4
+	sun.light_energy = 1.5
 	sun.shadow_enabled = true
 	sun.shadow_bias = 0.06
 	sun.shadow_normal_bias = 1.6
@@ -63,8 +63,8 @@ func _build_environment() -> void:
 	environment.sky = sky
 	# Gölgeler siyah değil lavanta: ortam ışığı sabit lavanta rengi
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color(0.64, 0.62, 0.88)
-	environment.ambient_light_energy = 0.8
+	environment.ambient_light_color = Color(0.68, 0.64, 0.92)
+	environment.ambient_light_energy = 0.9
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
 	environment.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	environment.tonemap_exposure = 1.0
