@@ -33,7 +33,7 @@ var hint_card: IconHintCard
 var inventory_panel: InventoryPanel
 var workshop_panel: WorkshopPanel
 var repair_panel: RepairPanel
-var aim_reticle: AimReticle
+var _hover_cursor := false
 
 
 func _ready() -> void:
@@ -75,10 +75,6 @@ func bind_player(p: Player) -> void:
 
 ## Toplama arayüzü kodla kurulur: vuruş halkası, toplama kartları, metinsiz ipucu, heybe.
 func _build_gather_ui() -> void:
-	aim_reticle = AimReticle.new()
-	aim_reticle.name = "AimReticle"
-	aim_reticle.visible = false
-	root.add_child(aim_reticle)
 	rhythm_ring = RhythmRing.new()
 	rhythm_ring.name = "RhythmRing"
 	add_child(rhythm_ring)
@@ -284,12 +280,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(_delta: float) -> void:
-	look_hint.visible = InputManager.device == InputManager.Device.KEYBOARD_MOUSE \
-		and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not get_tree().paused \
-		and not modal_open() and not inventory_panel.is_open
-	aim_reticle.visible = InputManager.is_aiming() and not get_tree().paused and not modal_open() \
-		and not inventory_panel.is_open and not (player != null and player.gather.active())
-	aim_reticle.has_target = _focus != null
+	var free := not get_tree().paused and not modal_open() and not inventory_panel.is_open
+	look_hint.visible = InputManager.is_pointer_mode() and not InputManager.mouse_looked and free
+	# İmleç bir hedefin üstündeyse "etkileşilebilir" imlecine geç.
+	var hover := free and player != null and player.hovered != null
+	if hover != _hover_cursor:
+		_hover_cursor = hover
+		Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if hover else Input.CURSOR_ARROW)
 	if debug_label.visible:
 		debug_label.text = "FPS %d  |  draw %d  |  %s  |  %s" % [
 			Engine.get_frames_per_second(),

@@ -158,6 +158,7 @@ func _run() -> void:
 	gw._on_planted("acorn", Vector3(-6.0, ValleyShape.height(-6.0, 12.0), 12.0))
 	check(gw.tree_field.planted_list().size() == before + 1, "palamut dikildi")
 	await _test_bridge(world, player)
+	await _test_mouse(player)
 	# Ritim kapalı: basılı tutunca vurur
 	gs.set_rhythm_hits(false)
 	print("\nSonuç: %s (%d hata)" % ["BAŞARILI" if _fails == 0 else "BAŞARISIZ", _fails])
@@ -228,3 +229,39 @@ func _walk_across(player: Player, from: Vector3, dir := 1.0) -> bool:
 	Input.action_release("move_forward")
 	await get_tree().physics_frame
 	return (player.global_position.x - goal) * dir > -1.0
+
+
+## Fare: sağ tuşla sürükleyince bakış, imlecin altındaki hedefe sol tık = etkileşim.
+func _test_mouse(player: Player) -> void:
+	print("== fare")
+	InputManager.set_touch_preview(false)
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_RIGHT
+	press.pressed = true
+	Input.parse_input_event(press)
+	await _frames(1)
+	InputManager.consume_look(0.0)
+	var motion := InputEventMouseMotion.new()
+	motion.relative = Vector2(40, 0)
+	Input.parse_input_event(motion)
+	await _frames(1)
+	check(InputManager.consume_look(0.0).x > 0.0, "sağ tuşla sürükleyince kamera döner")
+	var release := press.duplicate()
+	release.pressed = false
+	Input.parse_input_event(release)
+	Input.parse_input_event(motion)
+	await _frames(1)
+	check(InputManager.consume_look(0.0) == Vector2.ZERO, "sağ tuş bırakılınca imleç serbest, bakış yok")
+	var clicked := [0]
+	var bridge_it: Interactable = player.get_parent().get_node("Bridge/InteractableWest")
+	bridge_it.interacted.connect(func(_by): clicked[0] += 1)
+	var left := InputEventMouseButton.new()
+	left.button_index = MOUSE_BUTTON_LEFT
+	left.pressed = true
+	player.hovered = null
+	player._unhandled_input(left)
+	check(clicked[0] == 0, "boşluğa sol tık bir şey yapmaz")
+	player.hovered = bridge_it
+	player._unhandled_input(left)
+	check(clicked[0] == 1, "imlecin altındaki hedefe sol tık = etkileşim")
+	player.get_parent().hud.repair_panel.close_panel()

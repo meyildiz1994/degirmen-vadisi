@@ -11,12 +11,12 @@ const SUB := 4   ## kenar yumuşatma için piksel başına alt örnek
 static func apply() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
-	var arrow := ImageTexture.create_from_image(_arrow_image())
-	Input.set_custom_mouse_cursor(arrow, Input.CURSOR_ARROW, Vector2(3, 2))
-	Input.set_custom_mouse_cursor(arrow, Input.CURSOR_POINTING_HAND, Vector2(3, 2))
+	Input.set_custom_mouse_cursor(ImageTexture.create_from_image(_arrow_image()), Input.CURSOR_ARROW, Vector2(3, 2))
+	# Hedefin üstünde: yeşil dolgu + uçta küçük parıltı ("tıklayabilirsin").
+	Input.set_custom_mouse_cursor(ImageTexture.create_from_image(_arrow_image(true)), Input.CURSOR_POINTING_HAND, Vector2(3, 2))
 
 
-static func _arrow_image() -> Image:
+static func _arrow_image(hover := false) -> Image:
 	var outer := PackedVector2Array([
 		Vector2(3, 2), Vector2(31, 19), Vector2(19, 21.5), Vector2(26, 34),
 		Vector2(20.5, 37), Vector2(13.5, 24.5), Vector2(5, 33),
@@ -24,8 +24,8 @@ static func _arrow_image() -> Image:
 	var inner := _shrink(outer, 3.0)
 	var img := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
 	var ink := Palette.INK
-	var fill := Palette.SUNSET_LIGHT
-	var shade := Palette.SUNSET
+	var fill := Palette.MOSS_LIGHT.lightened(0.2) if hover else Palette.SUNSET_LIGHT
+	var shade := Palette.MOSS if hover else Palette.SUNSET
 	for y in SIZE:
 		for x in SIZE:
 			var cov_out := 0
@@ -53,7 +53,18 @@ static func _arrow_image() -> Image:
 				c = sh.lerp(c, a_out) if a_out > 0.0 else sh
 				c.a = maxf(a_out, sh.a)
 			img.set_pixel(x, y, c)
+	if hover:
+		_sparkle(img, Vector2(30, 6))
 	return img
+
+
+static func _sparkle(img: Image, c: Vector2) -> void:
+	for y in range(int(c.y) - 6, int(c.y) + 7):
+		for x in range(int(c.x) - 6, int(c.x) + 7):
+			var d := Vector2(x + 0.5, y + 0.5) - c
+			var star := minf(absf(d.x), absf(d.y)) < 1.2 and d.length() < 6.0
+			if star or d.length() < 2.2:
+				img.set_pixel(x, y, Palette.SUNSET_LIGHT.lightened(0.3) if d.length() < 2.2 else Palette.SUNSET)
 
 
 ## Çokgeni merkezine doğru küçült (iç dolgu için yeterli).

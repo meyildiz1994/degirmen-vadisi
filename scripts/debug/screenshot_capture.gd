@@ -119,8 +119,9 @@ func _gather_scenario() -> void:
 	if _args.has("step"):
 		GameState.tutorial_step = int(_args["step"])
 		GameState.set_quest(Tutorial.QUESTS[GameState.tutorial_step])
-	if _args.has("aim"):
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if _args.has("mouse"):
+		var mv: PackedFloat64Array = str(_args["mouse"]).split_floats(",")
+		get_viewport().warp_mouse(Vector2(mv[0], mv[1]))
 	if _args.has("cursor_png"):
 		var img := CursorArt._arrow_image()
 		img.resize(160, 160, Image.INTERPOLATE_NEAREST)

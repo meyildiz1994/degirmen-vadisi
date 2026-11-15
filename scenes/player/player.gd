@@ -24,6 +24,8 @@ signal interacted_with(target: Interactable)
 var yaw := 0.0
 var pitch := -0.28
 var focus: Interactable = null
+## Fare imlecinin altındaki hedef (yalnızca klavye/fare ile).
+var hovered: Interactable = null
 var input_enabled := true
 var gather: GatherController
 var _walk_phase := 0.0
@@ -103,8 +105,8 @@ func _animate(delta: float) -> void:
 	model.rotation.z = sin(_walk_phase) * 0.04 * clampf(speed / walk_speed, 0.0, 1.0)
 
 
-## Menzildeki en yakın etkileşim noktasını otomatik hedefle. Fareyle nişan alırken
-## ekranın ortasındaki imlece en yakın açıdaki hedef öncelikli (yoksa yine en yakını).
+## Menzildeki en yakın etkileşim noktasını otomatik hedefle. Fare imleci menzildeki
+## bir hedefin üstündeyse o hedef öncelikli (sol tıkla etkileşilir).
 func _update_focus() -> void:
 	var best: Interactable = null
 	var best_d := INF
@@ -122,46 +124,56 @@ func _update_focus() -> void:
 		if d < it.radius and d + it.focus_bias < best_d:
 			best = it
 			best_d = d + it.focus_bias
-	if InputManager.is_aiming():
-		var aimed := _aimed_target()
-		if aimed != null:
-			best = aimed
+	hovered = _hovered_target() if InputManager.is_pointer_mode() and input_enabled else null
+	if hovered != null:
+		best = hovered
 	if best != focus:
 		focus = best
 		focus_changed.emit(focus)
 
 
-const AIM_MAX_ANGLE := 0.32   ## radyan; imlecin bu kadar yakınındaki hedef seçilir
+const HOVER_PX := 80.0   ## 720p'de imlecin hedefe en fazla bu kadar piksel uzak olması
 
 
-func _aimed_target() -> Interactable:
-	var origin := camera.global_position
-	var fwd := -camera.global_basis.z
+func _hovered_target() -> Interactable:
+	var vp := get_viewport()
+	var mouse := vp.get_mouse_position()
+	var limit := HOVER_PX * vp.get_visible_rect().size.y / 720.0
 	var best: Interactable = null
-	var best_a := AIM_MAX_ANGLE
+	var best_d := limit
 	for node in get_tree().get_nodes_in_group(Interactable.GROUP):
 		var it := node as Interactable
 		if not it.can_focus() or it.global_position.distance_to(global_position) >= it.radius:
 			continue
-		var a := fwd.angle_to(it.global_position + Vector3(0, 0.4, 0) - origin)
-		if a < best_a:
+		var p := it.global_position + Vector3(0, 0.4, 0)
+		if camera.is_position_behind(p):
+			continue
+		var d := camera.unproject_position(p).distance_to(mouse)
+		if d < best_d:
 			best = it
-			best_a = a
+			best_d = d
 	return best
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not input_enabled:
 		return
-	if not event.is_action_pressed("interact") and not InputManager.is_click_interact(event):
+	var click := InputManager.is_click_interact(event)
+	if not event.is_action_pressed("interact") and not click:
 		return
+	# Fareyle: oturum sürerken her tık vuruştur; yoksa yalnızca imlecin altındaki hedef.
+	var target := focus
+	if click and not gather.active():
+		if hovered == null:
+			return
+		target = hovered
 	if gather.active():
 		gather.on_interact_pressed(gather.target)
-	elif focus is Gatherable:
-		gather.on_interact_pressed(focus as Gatherable)
-	elif focus != null:
-		focus.interact(self)
-		interacted_with.emit(focus)
+	elif target is Gatherable:
+		gather.on_interact_pressed(target as Gatherable)
+	elif target != null:
+		target.interact(self)
+		interacted_with.emit(target)
 	else:
 		return
 	get_viewport().set_input_as_handled()

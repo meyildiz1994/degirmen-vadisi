@@ -24,7 +24,7 @@ TOUCH_INTERACT,Etkileşim,Interact
 TOUCH_INVENTORY,Heybe,Bag
 TOUCH_PREVIEW_OFF,Dokunmatik önizleme: kapalı (F2),Touch preview: off (F2)
 TOUCH_PREVIEW_ON,Dokunmatik önizleme: açık (F2),Touch preview: on (F2)
-HINT_CLICK_TO_LOOK,Etrafa bakmak için oyun alanına tıkla,Click the game view to look around
+HINT_CLICK_TO_LOOK,Etrafa bakmak için sağ tuşu basılı tutup sürükle,Hold the right mouse button and drag to look around
 ACTION_GATHER,Topla,Gather
 ACTION_CHOP,Kes,Chop
 ACTION_MINE,Kır,Mine
