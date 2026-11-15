@@ -1,7 +1,7 @@
 extends Node3D
 ## Ağaçlar (meşe, çam), çimen, saz ve çiçekler: hepsi MultiMeshInstance3D.
 ## Tüm çimen tek draw call, tüm yaprak blob'ları tek draw call.
-## Aşama 2'de ağaçlar toplanabilir kaynaklara dönüşecek; konumlar deterministik.
+## Ağaçlar kesilebilir ve dikilebilir: TreeField (konumlar deterministik).
 
 const SEED := 7
 const GRASS_COUNTS := [2600, 5200, 9000]  ## Düşük / Orta / Yüksek
@@ -11,6 +11,7 @@ var keep_clear: Array[Vector3] = []
 
 var oak_positions: Array[Vector3] = []
 var pine_positions: Array[Vector3] = []
+var tree_field: TreeField
 var _grass: MultiMeshInstance3D
 var _rng := RandomNumberGenerator.new()
 
@@ -82,86 +83,10 @@ func _mm(mesh: Mesh, count: int, material: Material, use_colors := true) -> Mult
 
 
 func _build_trees() -> void:
-	var trunk := CylinderMesh.new()
-	trunk.top_radius = 0.14
-	trunk.bottom_radius = 0.24
-	trunk.height = 1.0
-	trunk.radial_segments = 7
-	trunk.rings = 1
-	var blob := SphereMesh.new()
-	blob.radius = 1.0
-	blob.height = 2.0
-	blob.radial_segments = 14
-	blob.rings = 8
-	var cone := CylinderMesh.new()
-	cone.top_radius = 0.0
-	cone.bottom_radius = 1.0
-	cone.height = 1.0
-	cone.radial_segments = 10
-	cone.rings = 2
-
-	var trunk_xf: Array[Transform3D] = []
-	var trunk_col: Array[Color] = []
-	var blob_xf: Array[Transform3D] = []
-	var blob_col: Array[Color] = []
-	var cone_xf: Array[Transform3D] = []
-	var cone_col: Array[Color] = []
-	var body := StaticBody3D.new()
-	body.name = "TreeColliders"
-	add_child(body)
-
-	for p in oak_positions:
-		var s := _rng.randf_range(0.85, 1.25)
-		var th := 2.0 * s
-		trunk_xf.append(Transform3D(Basis.from_scale(Vector3(s, th, s)), p + Vector3(0, th * 0.5 - 0.1, 0)))
-		trunk_col.append(Palette.WOOD_DARK.lerp(Palette.WOOD, _rng.randf()))
-		var crown := p + Vector3(0, th + 0.6 * s, 0)
-		var base_green := Palette.MOSS.lerp(Palette.MOSS_LIGHT, _rng.randf_range(0.0, 0.6))
-		for i in 7:
-			var off := Vector3(_rng.randf_range(-1.0, 1.0), _rng.randf_range(-0.4, 0.9), _rng.randf_range(-1.0, 1.0)) * s
-			if i == 0:
-				off = Vector3(0, 0.25 * s, 0)
-			var r := _rng.randf_range(0.7, 1.05) * s
-			var sq := Vector3(r, r * _rng.randf_range(0.78, 0.95), r)
-			var b := Basis(Vector3.UP, _rng.randf() * TAU).scaled(sq)
-			blob_xf.append(Transform3D(b, crown + off))
-			var shade := clampf(0.55 + off.y * 0.4, 0.0, 1.0)
-			blob_col.append(Palette.MOSS_DARK.lerp(base_green, shade))
-		_add_trunk_collider(body, p, 0.3 * s)
-
-	for p in pine_positions:
-		var s := _rng.randf_range(0.8, 1.3)
-		var th := 1.2 * s
-		trunk_xf.append(Transform3D(Basis.from_scale(Vector3(s * 0.8, th, s * 0.8)), p + Vector3(0, th * 0.5 - 0.1, 0)))
-		trunk_col.append(Palette.WOOD_DARK)
-		var green := Palette.PINE.lerp(Palette.MOSS_DARK, _rng.randf())
-		for i in 3:
-			var r := (1.35 - i * 0.33) * s
-			var h := (1.6 - i * 0.2) * s
-			var y := th + i * 0.95 * s + h * 0.5 - 0.2
-			cone_xf.append(Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3(r, h, r)), p + Vector3(0, y, 0)))
-			cone_col.append(green.lerp(Palette.MOSS_LIGHT, i * 0.12))
-		_add_trunk_collider(body, p, 0.25 * s)
-
-	var mm_trunk := _mm(trunk, trunk_xf.size(), WatercolorMaterials.vertex_colored(true))
-	mm_trunk.name = "Trunks"
-	_fill(mm_trunk.multimesh, trunk_xf, trunk_col)
-	var mm_blob := _mm(blob, blob_xf.size(), WatercolorMaterials.foliage(true))
-	mm_blob.name = "OakLeaves"
-	_fill(mm_blob.multimesh, blob_xf, blob_col)
-	var mm_cone := _mm(cone, cone_xf.size(), WatercolorMaterials.foliage(true))
-	mm_cone.name = "PineNeedles"
-	_fill(mm_cone.multimesh, cone_xf, cone_col)
-
-
-func _add_trunk_collider(body: StaticBody3D, p: Vector3, r: float) -> void:
-	var cs := CollisionShape3D.new()
-	var cyl := CylinderShape3D.new()
-	cyl.radius = r
-	cyl.height = 3.0
-	cs.shape = cyl
-	cs.position = p + Vector3(0, 1.5, 0)
-	body.add_child(cs)
+	tree_field = TreeField.new()
+	tree_field.name = "Trees"
+	add_child(tree_field)
+	tree_field.build(oak_positions, pine_positions, _rng)
 
 
 func _fill(mm: MultiMesh, xf: Array[Transform3D], col: Array[Color]) -> void:
@@ -260,6 +185,16 @@ func _build_flowers() -> void:
 	mmi.name = "Flowers"
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_fill(mmi.multimesh, xf, col)
+
+
+## Tohum dikmeye uygun mu: düz zemin, dere/patika/yapı dışında, diğer ağaçlardan uzak.
+func can_plant(x: float, z: float) -> bool:
+	if not _ground_ok(x, z, 1.4, 1.1) or not _is_clear(x, z, 0.5):
+		return false
+	for p in tree_field.active_positions():
+		if Vector2(p.x - x, p.z - z).length() < 2.6:
+			return false
+	return true
 
 
 func _on_quality_changed(level: int) -> void:

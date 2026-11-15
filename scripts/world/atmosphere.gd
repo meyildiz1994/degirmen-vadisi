@@ -63,7 +63,7 @@ func _build_environment() -> void:
 	environment.sky = sky
 	# Gölgeler siyah değil lavanta: ortam ışığı sabit lavanta rengi
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color(0.70, 0.72, 0.86)
+	environment.ambient_light_color = Color(0.72, 0.75, 0.82)
 	environment.ambient_light_energy = 0.9
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
 	environment.tonemap_mode = Environment.TONE_MAPPER_LINEAR

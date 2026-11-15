@@ -18,6 +18,8 @@ extends CanvasLayer
 @onready var quality_button: Button = %QualityButton
 @onready var language_button: Button = %LanguageButton
 @onready var touch_button: Button = %TouchPreviewButton
+@onready var rhythm_button: Button = %RhythmButton
+@onready var root: Control = $SafeArea/Root
 
 var player: Player
 var _toast_tween: Tween
@@ -25,6 +27,10 @@ var _focus: Interactable
 var _quest_open := false
 var _quest_tween: Tween
 var _bubble_tween: Tween
+var rhythm_ring: RhythmRing
+var pickup_feed: PickupFeed
+var hint_card: IconHintCard
+var inventory_panel: InventoryPanel
 
 
 func _ready() -> void:
@@ -46,6 +52,9 @@ func _ready() -> void:
 	quality_button.pressed.connect(func(): AudioManager.play_ui("ui_click"); GameState.cycle_quality())
 	language_button.pressed.connect(func(): AudioManager.play_ui("ui_click"); GameState.toggle_locale())
 	touch_button.pressed.connect(func(): InputManager.set_touch_preview(not InputManager.touch_preview))
+	rhythm_button.pressed.connect(func(): AudioManager.play_ui("ui_click"); GameState.set_rhythm_hits(not GameState.rhythm_hits))
+	GameState.rhythm_changed.connect(func(_e): _refresh_buttons())
+	_build_gather_ui()
 	_on_quest_changed(GameState.current_quest_key)
 	_refresh_buttons()
 
@@ -54,6 +63,61 @@ func bind_player(p: Player) -> void:
 	player = p
 	p.focus_changed.connect(_on_focus_changed)
 	p.interacted_with.connect(_on_interacted)
+	rhythm_ring.bind(p.gather, p.camera)
+	p.gather.session_started.connect(func(_g, _t): _refresh_hint())
+	p.gather.session_ended.connect(_refresh_hint)
+	p.gather.hit_landed.connect(func(_g, _s): _refresh_hint.call_deferred())
+	p.gather.tool_missing.connect(_on_tool_missing)
+
+
+## Toplama arayüzü kodla kurulur: vuruş halkası, toplama kartları, metinsiz ipucu, heybe.
+func _build_gather_ui() -> void:
+	rhythm_ring = RhythmRing.new()
+	rhythm_ring.name = "RhythmRing"
+	add_child(rhythm_ring)
+	move_child(rhythm_ring, 0)
+	pickup_feed = PickupFeed.new()
+	pickup_feed.name = "PickupFeed"
+	root.add_child(pickup_feed)
+	pickup_feed.set_anchors_preset(Control.PRESET_CENTER_LEFT)
+	pickup_feed.offset_left = 8.0
+	pickup_feed.offset_top = -40.0
+	pickup_feed.offset_right = 300.0
+	pickup_feed.offset_bottom = 200.0
+	hint_card = IconHintCard.new()
+	hint_card.name = "IconHintCard"
+	root.add_child(hint_card)
+	hint_card.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	hint_card.offset_left = 12.0
+	hint_card.offset_top = 12.0
+	inventory_panel = InventoryPanel.new()
+	inventory_panel.name = "InventoryPanel"
+	add_child(inventory_panel)
+	move_child(inventory_panel, pause_menu.get_index())
+	inventory_panel.closed.connect(_on_inventory_closed)
+
+
+func _on_tool_missing(kind: String, _g: Gatherable) -> void:
+	hint_card.flash([kind, "arrow", "workshop"], 3.2)
+	AudioManager.play_ui("ui_click")
+
+
+func toggle_inventory() -> void:
+	if inventory_panel.is_open:
+		inventory_panel.close_panel()
+		return
+	AudioManager.play_ui("inventory_open")
+	InputManager.release_mouse()
+	if player:
+		player.input_enabled = false
+		player.gather.stop()
+	inventory_panel.open_panel()
+
+
+func _on_inventory_closed() -> void:
+	AudioManager.play_ui("panel_close")
+	if player:
+		player.input_enabled = true
 
 
 ## Yeni görev: metni güncelle, ikonda bildirim rozeti ve kısa "Yeni görev!" balonu göster.
@@ -106,7 +170,7 @@ func _on_focus_changed(target: Interactable) -> void:
 func _refresh_hint() -> void:
 	hint_panel.visible = _focus != null and not get_tree().paused
 	if _focus:
-		hint_label.text = "%s: %s" % [tr(_focus.action_key), tr(_focus.display_name_key)]
+		hint_label.text = _focus.hint_text()
 	hint_glyph.refresh()
 
 
@@ -119,6 +183,7 @@ func _refresh_buttons() -> void:
 	quality_button.text = "%s: %s" % [tr("QUALITY"), tr(GameState.quality_name_key())]
 	language_button.text = "%s: %s" % [tr("LANGUAGE"), "Türkçe" if GameState.current_locale() == "tr" else "English"]
 	touch_button.text = tr("TOUCH_PREVIEW_ON") if InputManager.touch_preview else tr("TOUCH_PREVIEW_OFF")
+	rhythm_button.text = "%s: %s" % [tr("RHYTHM_HITS"), tr("ON") if GameState.rhythm_hits else tr("OFF")]
 
 
 func _on_interacted(target: Interactable) -> void:
@@ -148,15 +213,17 @@ func set_paused(paused: bool) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause"):
+	if event.is_action_pressed("pause") and inventory_panel.is_open:
+		inventory_panel.close_panel()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("pause"):
 		set_paused(not get_tree().paused)
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("quest_log") and not get_tree().paused:
 		toggle_quest_log()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("inventory") and not get_tree().paused:
-		AudioManager.play_ui("inventory_open")
-		show_toast("MSG_INVENTORY_SOON", 2.0)
+		toggle_inventory()
 		get_viewport().set_input_as_handled()
 
 

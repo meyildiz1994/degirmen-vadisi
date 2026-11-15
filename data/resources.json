@@ -1,0 +1,43 @@
+{
+	"version": 1,
+	"comment": "Toplanabilir kaynaklar. tool: hand | axe | pickaxe. hardness: vuruş sayısı formülünde kullanılır. Süreler saniye.",
+	"gathering": {
+		"base_hits": 5,
+		"hit_exponent": 2.0,
+		"softer_tool_penalty": 1.5,
+		"blunt_power_factor": 0.5,
+		"max_hits": 24,
+		"sweet_progress": 2,
+		"swing_base": 0.34,
+		"swing_per_weight": 0.06,
+		"sweet_window": 0.2,
+		"early_lock": 0.4
+	},
+	"resources": {
+		"oak_tree":    {"name": "RES_OAK_TREE",   "tool": "axe",     "hardness": 5, "fx": "wood",   "sfx_hit": "axe_chop",    "sfx_done": "tree_fall",
+		                "drops": [{"id": "oak", "min": 3, "max": 4}, {"id": "branch", "min": 1, "max": 2}, {"id": "acorn", "min": 1, "max": 2, "chance": 0.85}],
+		                "stump_time": 60, "sapling_time": 150},
+		"pine_tree":   {"name": "RES_PINE_TREE",  "tool": "axe",     "hardness": 3, "fx": "wood",   "sfx_hit": "axe_chop",    "sfx_done": "tree_fall",
+		                "drops": [{"id": "pine", "min": 3, "max": 4}, {"id": "branch", "min": 1, "max": 2}, {"id": "pine_cone", "min": 1, "max": 2, "chance": 0.85}],
+		                "stump_time": 50, "sapling_time": 120},
+		"boulder":     {"name": "RES_BOULDER",    "tool": "pickaxe", "hardness": 5, "fx": "stone",  "sfx_hit": "pickaxe_hit", "sfx_done": "rock_break",
+		                "drops": [{"id": "stone", "min": 3, "max": 4}], "respawn": 90},
+		"copper_vein": {"name": "RES_COPPER_VEIN","tool": "pickaxe", "hardness": 6, "fx": "copper", "sfx_hit": "pickaxe_hit", "sfx_done": "rock_break",
+		                "drops": [{"id": "copper", "min": 2, "max": 3}, {"id": "stone", "min": 1, "max": 1}], "respawn": 150},
+		"iron_vein":   {"name": "RES_IRON_VEIN",  "tool": "pickaxe", "hardness": 8, "fx": "iron",   "sfx_hit": "pickaxe_hit", "sfx_done": "rock_break",
+		                "drops": [{"id": "iron", "min": 2, "max": 3}, {"id": "stone", "min": 1, "max": 1}], "respawn": 180},
+		"branch_pile": {"name": "RES_BRANCH",     "tool": "hand", "fx": "leaf",  "drops": [{"id": "branch", "min": 1, "max": 2}], "respawn": 45},
+		"pebble":      {"name": "RES_PEBBLE",     "tool": "hand", "fx": "dust",  "drops": [{"id": "stone", "min": 1, "max": 1}], "respawn": 40},
+		"clay_lump":   {"name": "RES_CLAY",       "tool": "hand", "fx": "clay",  "drops": [{"id": "clay", "min": 1, "max": 2}], "respawn": 40},
+		"reed_clump":  {"name": "RES_REED",       "tool": "hand", "fx": "leaf",  "drops": [{"id": "reed", "min": 2, "max": 3}], "respawn": 50}
+	},
+	"tools": {
+		"axe":     {"name": "TOOL_AXE",     "gathers": ["oak_tree", "pine_tree"]},
+		"pickaxe": {"name": "TOOL_PICKAXE", "gathers": ["boulder", "copper_vein", "iron_vein"]}
+	},
+	"first_tools": {
+		"comment": "Eğitim: ilk taş balta ve taş kazma. Aşama 3'te kalıp sistemiyle değişir; istatistikler yine formülden gelir.",
+		"axe":     {"head": "stone", "handle": "branch", "cost": {"stone": 2, "branch": 1}},
+		"pickaxe": {"head": "stone", "handle": "branch", "cost": {"stone": 2, "branch": 1}}
+	}
+}

@@ -1,0 +1,50 @@
+{
+	"version": 1,
+	"style": "soft, warm, gentle, acoustic, cozy, natural, no harsh highs",
+	"models": {
+		"sfx": "eleven_text_to_sound_v3",
+		"music": "music_v2_5"
+	},
+	"loudness": {
+		"sfx": -18,
+		"ui": -22,
+		"ambience": -24,
+		"music": -16
+	},
+	"sounds": [
+		{"id": "amb_stream",        "type": "ambience", "loop": true, "duration": 30, "variations": 1, "prompt": "small shallow stream flowing over pebbles in a quiet valley, steady gentle babbling water, seamless loop"},
+		{"id": "amb_waterfall",     "type": "ambience", "loop": true, "duration": 30, "variations": 1, "prompt": "distant small waterfall heard across a meadow, soft continuous rushing water, seamless loop"},
+		{"id": "amb_wind_leaves",   "type": "ambience", "loop": true, "duration": 30, "variations": 1, "prompt": "light evening breeze through oak leaves and tall grass, gentle rustling, seamless loop"},
+		{"id": "amb_evening_birds", "type": "ambience", "loop": true, "duration": 30, "variations": 1, "prompt": "few distant songbirds in the evening countryside, sparse soft chirps, calm, seamless loop"},
+		{"id": "amb_mill_wheel",    "type": "ambience", "loop": true, "duration": 30, "variations": 1, "prompt": "old wooden water mill wheel turning slowly, creaking wood and splashing paddles, rhythmic, seamless loop"},
+
+		{"id": "axe_chop",       "type": "sfx", "duration": 0.8, "variations": 3, "prompt": "single stone axe chop into a tree trunk, muffled woody thunk"},
+		{"id": "pickaxe_hit",    "type": "sfx", "duration": 0.8, "variations": 3, "prompt": "single pickaxe strike on a rock, soft stony knock with a few small pebbles falling"},
+		{"id": "tree_fall",      "type": "sfx", "duration": 3.0, "variations": 3, "prompt": "small tree creaking then falling onto grass, leaves rustling, soft heavy thud"},
+		{"id": "gather_pickup",  "type": "sfx", "duration": 0.6, "variations": 3, "prompt": "picking up a small natural object and putting it in a cloth bag, light soft rustle"},
+		{"id": "sweet_hit",      "type": "sfx", "duration": 1.0, "variations": 3, "prompt": "satisfying perfectly timed tool strike, warm wooden knock followed by a tiny bright chime sparkle"},
+		{"id": "sapling_plant",  "type": "sfx", "duration": 1.0, "variations": 1, "prompt": "planting a seed, hands patting soft soil, small dirt crumble"},
+		{"id": "sapling_grown",  "type": "sfx", "duration": 1.2, "variations": 1, "prompt": "short soft magical sparkle, gentle rising chime as a young tree finishes growing"},
+
+		{"id": "footstep_grass", "type": "sfx", "duration": 0.5, "variations": 3, "prompt": "single footstep on soft grass, leather shoe, quiet"},
+		{"id": "footstep_stone", "type": "sfx", "duration": 0.5, "variations": 3, "prompt": "single footstep on gravel and stone, leather shoe, quiet"},
+		{"id": "footstep_wood",  "type": "sfx", "duration": 0.5, "variations": 3, "prompt": "single footstep on an old wooden bridge plank, hollow soft knock"},
+
+		{"id": "slot_place",     "type": "sfx", "duration": 0.6, "variations": 3, "prompt": "placing a material piece into a wooden mold slot, soft wooden click"},
+		{"id": "craft_success",  "type": "sfx", "duration": 1.5, "variations": 3, "prompt": "crafting finished, soft satisfying wooden click followed by a light warm bell ding"},
+		{"id": "craft_fail",     "type": "sfx", "duration": 0.8, "variations": 3, "prompt": "soft dull wooden thump, gentle and not punishing, a small miss"},
+		{"id": "repair_done",    "type": "sfx", "duration": 2.0, "variations": 3, "prompt": "repair complete, wooden beams settling into place with a warm resonant chime"},
+		{"id": "part_crack",     "type": "sfx", "duration": 1.0, "variations": 3, "prompt": "wooden part slowly cracking under strain, soft splintering creak"},
+		{"id": "tool_named",     "type": "sfx", "duration": 1.5, "variations": 3, "prompt": "short magical shimmer, soft glittering chimes, a tool receiving a name"},
+
+		{"id": "ui_click",       "type": "ui",  "duration": 0.5, "variations": 3, "prompt": "soft paper button click, gentle wooden tick"},
+		{"id": "panel_open",     "type": "ui",  "duration": 0.6, "variations": 3, "prompt": "opening a paper panel, soft paper slide and flutter"},
+		{"id": "panel_close",    "type": "ui",  "duration": 0.6, "variations": 3, "prompt": "closing a paper panel, soft paper fold"},
+		{"id": "inventory_open", "type": "ui",  "duration": 0.7, "variations": 3, "prompt": "opening a small leather satchel, soft buckle and cloth rustle"},
+
+		{"id": "music_explore",  "type": "music", "loop": true, "duration": 150, "variations": 1, "prompt": "cozy exploration theme for a peaceful valley game, acoustic guitar and soft piano, slow tempo, warm and calm, instrumental, loopable"},
+		{"id": "music_workshop", "type": "music", "loop": true, "duration": 120, "variations": 1, "prompt": "calm workshop theme, kalimba and soft strings, gentle and focused, instrumental, loopable"},
+		{"id": "music_finale",   "type": "music", "loop": false, "duration": 120, "variations": 1, "prompt": "warm emotional finale as an old water mill turns again, acoustic guitar, piano and strings building to a heartfelt gentle climax, instrumental"}
+	],
+	"generated": {}
+}

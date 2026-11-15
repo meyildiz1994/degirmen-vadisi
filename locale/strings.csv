@@ -9,11 +9,10 @@ NAME_UNKNOWN,???,???
 NAME_MILL,Eski Su Değirmeni,Old Water Mill
 NAME_BRIDGE,Yıkık Köprü,Broken Bridge
 NAME_WORKSHOP,Atölye,Workshop
-MSG_MILL,"Çarkın kanatları kırık, duvarı yarım kalmış. Bir gün yeniden dönecek.","The wheel's paddles are broken and a wall has crumbled. One day it will turn again."
+MSG_MILL,"Çarkın kanatları kırık, duvarı yarım kalmış. Bir gün yeniden dönecek.",The wheel's paddles are broken and a wall has crumbled. One day it will turn again.
 MSG_BRIDGE,Kirişler çürümüş. Karşı kıyıya geçmek için köprü onarılmalı.,The beams have rotted. The bridge must be repaired to reach the far bank.
 MSG_BRIDGE_FAR,Karşı kıyıda kızıl taşlar parlıyor... demir mi?,Reddish stones glint on the far bank... iron?
-MSG_WORKSHOP,Tozlu ama sağlam bir tezgâh. Yakında burada üretim yapacaksın.,"A dusty but sturdy workbench. Soon you'll craft here."
-MSG_INVENTORY_SOON,Heybe şimdilik boş.,Your satchel is empty for now.
+MSG_WORKSHOP,Tezgâh hazır. Yakında burada kalıplarla yeni parçalar üreteceksin.,The workbench is ready. Soon you'll shape new parts here with molds.
 PAUSED,Duraklatıldı,Paused
 RESUME,Devam et,Resume
 QUALITY,Grafik,Graphics
@@ -26,3 +25,51 @@ TOUCH_INVENTORY,Heybe,Bag
 TOUCH_PREVIEW_OFF,Dokunmatik önizleme: kapalı (F2),Touch preview: off (F2)
 TOUCH_PREVIEW_ON,Dokunmatik önizleme: açık (F2),Touch preview: on (F2)
 HINT_CLICK_TO_LOOK,Etrafa bakmak için oyun alanına tıkla,Click the game view to look around
+ACTION_GATHER,Topla,Gather
+ACTION_CHOP,Kes,Chop
+ACTION_MINE,Kır,Mine
+ACTION_PLANT,Dik,Plant
+HITS,vuruş,hits
+RES_OAK_TREE,Meşe ağacı,Oak tree
+RES_PINE_TREE,Çam ağacı,Pine tree
+RES_BOULDER,Kaya,Boulder
+RES_COPPER_VEIN,Bakır damarı,Copper vein
+RES_IRON_VEIN,Demir damarı,Iron vein
+RES_BRANCH,Dal,Branch
+RES_PEBBLE,Küçük taş,Small stone
+RES_CLAY,Kil,Clay
+RES_REED,Saz,Reeds
+MAT_OAK,Meşe,Oak
+MAT_PINE,Çam,Pine
+MAT_STONE,Taş,Stone
+MAT_COPPER,Bakır,Copper
+MAT_IRON,Demir,Iron
+MAT_CLAY,Kil,Clay
+MAT_REED,Saz,Reed
+MAT_BRANCH,Dal,Branch
+MAT_OAK_ADJ,Meşe,Oak
+MAT_PINE_ADJ,Çam,Pine
+MAT_STONE_ADJ,Taş,Stone
+MAT_COPPER_ADJ,Bakır,Copper
+MAT_IRON_ADJ,Demir,Iron
+MAT_CLAY_ADJ,Kil,Clay
+MAT_REED_ADJ,Saz,Reed
+MAT_BRANCH_ADJ,Dal,Branch
+SEED_ACORN,Palamut,Acorn
+SEED_PINE_CONE,Çam kozalağı,Pine cone
+TOOL_AXE,Balta,Axe
+TOOL_PICKAXE,Kazma,Pickaxe
+TOOL_BLUNT,"Körelmiş, onarılmalı","Blunt, needs repair"
+STAT_POWER,Güç,Power
+STAT_WEIGHT,Ağırlık,Weight
+INVENTORY_TITLE,Heybe,Satchel
+INVENTORY_TOOLS,Aletler,Tools
+MSG_INVENTORY_EMPTY,Heybe boş. Etrafta dal ve taş var.,Your satchel is empty. There are branches and stones around.
+RHYTHM_HITS,Ritim vuruşu,Rhythm hits
+ON,Açık,On
+OFF,Kapalı,Off
+QUEST_FIRST_GATHER,Etraftan dal ve küçük taş topla.,Gather branches and small stones nearby.
+QUEST_FIRST_TOOLS,"Atölyeye git, ilk taş baltanı ve kazmanı yap.",Go to the workshop and make your first stone axe and pickaxe.
+QUEST_USE_TOOLS,"Baltayla bir ağaç kes, kazmayla bir kaya kır.",Chop a tree with the axe and break a boulder with the pickaxe.
+MSG_FIRST_TOOLS,Taş balta ve taş kazma hazır! Halka daireye değdiğinde bas.,Stone axe and pickaxe ready! Press when the ring meets the circle.
+QUEST_WELCOME,Vadiye hoş geldin! Biraz dolaş ve etrafına bak.,Welcome to the valley! Walk around and look about.

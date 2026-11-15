@@ -17,6 +17,9 @@ const PLAYER_SPAWN := Vector2(-9.5, 9.5)
 @onready var touch: Control = $TouchLayer/TouchControls
 @onready var ambience_root: Node3D = $Ambience
 
+var gather_world: GatherWorld
+var tutorial: Tutorial
+
 
 func _ready() -> void:
 	_place_structures()
@@ -29,15 +32,29 @@ func _ready() -> void:
 		Vector3(props.IRON_SPOT.x, props.IRON_SPOT.y, 2.5),
 	])
 	vegetation.build()
-	props.build()
+	props.build(vegetation.oak_positions)
 	_place_player()
 	_build_ambience()
 	hud.bind_player(player)
+	_build_gathering()
 	player.focus_changed.connect(func(t): touch.set_interact_available(t != null))
 	SaveSystem.restore_persisted_nodes()
+	tutorial.setup(hud, gather_world, workshop.interactable, player)
 	AudioManager.play_music("music_explore")
 	if ScreenshotCapture.requested():
 		add_child(ScreenshotCapture.new())
+
+
+## Toplama: kaynaklar + geri bildirim + kayıt (GatherWorld), heybe bildirimleri, eğitim.
+func _build_gathering() -> void:
+	gather_world = GatherWorld.new()
+	gather_world.name = "Gathering"
+	add_child(gather_world)
+	gather_world.setup(player, vegetation, props.gatherables)
+	gather_world.item_arrived.connect(hud.pickup_feed.add_item)
+	tutorial = Tutorial.new()
+	tutorial.name = "Tutorial"
+	add_child(tutorial)
 
 
 func _ground(x: float, z: float) -> Vector3:
