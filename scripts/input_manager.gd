@@ -50,7 +50,8 @@ func _input(event: InputEvent) -> void:
 		if absf(event.axis_value) > GAMEPAD_AXIS_THRESHOLD:
 			_set_device(Device.GAMEPAD)
 	elif event is InputEventKey or event is InputEventMouseButton:
-		if not touch_preview:
+		# Dokunmatikten türetilen fare olayları cihazı değiştirmesin
+		if not touch_preview and event.device != InputEvent.DEVICE_ID_EMULATION:
 			_set_device(Device.KEYBOARD_MOUSE)
 	elif event is InputEventMouseMotion and not touch_preview:
 		if event.relative.length() > 2.0 and device == Device.GAMEPAD:
@@ -151,8 +152,8 @@ func release_all_virtual() -> void:
 func glyph_for(action: String) -> String:
 	match device:
 		Device.GAMEPAD:
-			return {"interact": "A", "inventory": "Y", "pause": "Start"}.get(action, "?")
+			return {"interact": "A", "inventory": "Y", "pause": "Start", "quest_log": "↑"}.get(action, "?")
 		Device.TOUCH:
 			return ""
 		_:
-			return {"interact": "E", "inventory": "Tab", "pause": "Esc"}.get(action, "?")
+			return {"interact": "E", "inventory": "Tab", "pause": "Esc", "quest_log": "J"}.get(action, "?")

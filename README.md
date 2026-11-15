@@ -49,6 +49,7 @@ Oyunda **F5** (veya gamepad LB) ya da duraklat menüsündeki "Grafik" butonu kal
 | interact | E | A | Sağ alttaki "Etkileşim" |
 | inventory | Tab / I | Y | Üstteki "Heybe" |
 | pause | Esc | Start | Üstteki ‖ butonu |
+| quest_log (görev kartı) | J veya sağ üstteki ikon | D-pad yukarı | Sağ üstteki görev ikonu |
 | (geliştirici) kalite | F5 | LB | Duraklat menüsü |
 | (geliştirici) dokunmatik önizleme | F2 | | |
 

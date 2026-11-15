@@ -8,6 +8,8 @@ const BLOB_SHADER := preload("res://shaders/ui_blob.gdshader")
 @export var wash_color := Color(0.97, 0.93, 0.85, 0.86)
 @export var padding := Vector2(26, 16)
 @export var blob_seed := 0.0
+## Kart görünümü: daha düzgün kenar, belirgin pigment çerçevesi ve yumuşak gölge.
+@export var card := false
 
 static var _mask: NoiseTexture2D
 
@@ -44,9 +46,19 @@ func _ready() -> void:
 	mat.set_shader_parameter("mask_noise", mask_noise())
 	mat.set_shader_parameter("wash_color", wash_color)
 	mat.set_shader_parameter("seed", blob_seed if blob_seed != 0.0 else randf() * 10.0)
+	if card:
+		mat.set_shader_parameter("wash_color", Color(wash_color, maxf(wash_color.a, 0.94)))
+		mat.set_shader_parameter("rim_color", Color(0.72, 0.56, 0.42, 0.95))
+		mat.set_shader_parameter("shadow_color", Color(0.42, 0.32, 0.24, 0.28))
+		mat.set_shader_parameter("edge_noise", 0.12)
+		mat.set_shader_parameter("corner", 0.32)
+		mat.set_shader_parameter("rim_width", 0.1)
+		mat.set_shader_parameter("softness", 0.03)
 	_bg.material = mat
 	add_child(_bg, false, Node.INTERNAL_MODE_FRONT)
 	resized.connect(_on_resized)
+	# PanelContainer çocukları içerik alanına sığdırır; lekeyi her sıralamadan sonra yeniden taşır.
+	sort_children.connect(_on_resized)
 	_on_resized()
 
 
@@ -54,6 +66,10 @@ func _on_resized() -> void:
 	if _bg == null:
 		return
 	# Leke biraz taşsın: panelden geniş çiz
-	_bg.position = Vector2(-10, -8)
-	_bg.size = size + Vector2(20, 16)
+	var grow := Vector2(6, 4) if card else Vector2(10, 8)
+	var rect := Rect2(-grow, size + grow * 2.0 + (Vector2(8, 10) if card else Vector2.ZERO))
+	if _bg.position == rect.position and _bg.size == rect.size:
+		return
+	_bg.position = rect.position
+	_bg.size = rect.size
 	(_bg.material as ShaderMaterial).set_shader_parameter("rect_size", _bg.size)

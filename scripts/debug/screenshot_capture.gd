@@ -51,6 +51,10 @@ func _capture() -> void:
 		GameState.set_locale(str(_args["locale"]))
 	if _args.has("quality"):
 		GameState.set_quality(int(_args["quality"]))
+	if _args.has("quest_open"):
+		var hud := get_parent().get_node_or_null("HUD")
+		if hud:
+			hud.set_quest_log_open(true)
 	var frames := int(_args.get("frames", "90"))
 	for i in frames:
 		await get_tree().process_frame

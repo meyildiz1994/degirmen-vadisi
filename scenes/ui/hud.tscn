@@ -1,9 +1,11 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/hud.gd" id="1_hud"]
 [ext_resource type="Script" path="res://scripts/ui/safe_area.gd" id="2_safe"]
 [ext_resource type="Script" path="res://scripts/ui/watercolor_panel.gd" id="3_panel"]
 [ext_resource type="Script" path="res://scripts/ui/glyph_badge.gd" id="4_glyph"]
+[ext_resource type="Script" path="res://scripts/ui/mouse_icon.gd" id="5_mouse"]
+[ext_resource type="Script" path="res://scripts/ui/quest_button.gd" id="6_qbtn"]
 
 [node name="HUD" type="CanvasLayer"]
 layer = 5
@@ -22,23 +24,63 @@ script = ExtResource("2_safe")
 layout_mode = 2
 mouse_filter = 2
 
-[node name="QuestPanel" type="PanelContainer" parent="SafeArea/Root"]
+[node name="QuestButton" type="Button" parent="SafeArea/Root"]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -380.0
-offset_top = 6.0
+offset_left = -76.0
+offset_top = 2.0
 offset_right = -6.0
-offset_bottom = 96.0
+offset_bottom = 72.0
+grow_horizontal = 0
+script = ExtResource("6_qbtn")
+
+[node name="NewQuestBubble" type="PanelContainer" parent="SafeArea/Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -250.0
+offset_top = 14.0
+offset_right = -90.0
+offset_bottom = 58.0
 grow_horizontal = 0
 mouse_filter = 2
 script = ExtResource("3_panel")
+padding = Vector2(16, 4)
+blob_seed = 4.2
+card = true
+
+[node name="Label" type="Label" parent="SafeArea/Root/NewQuestBubble"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.4, 0.26, 1)
+theme_override_font_sizes/font_size = 22
+text = "NEW_QUEST"
+horizontal_alignment = 1
+
+[node name="QuestPanel" type="PanelContainer" parent="SafeArea/Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -396.0
+offset_top = 84.0
+offset_right = -10.0
+offset_bottom = 188.0
+grow_horizontal = 0
+mouse_filter = 2
+script = ExtResource("3_panel")
+padding = Vector2(28, 16)
 blob_seed = 2.3
+card = true
 
 [node name="VBox" type="VBoxContainer" parent="SafeArea/Root/QuestPanel"]
 layout_mode = 2
-theme_override_constants/separation = 0
+theme_override_constants/separation = 4
 mouse_filter = 2
 
 [node name="QuestTitle" type="Label" parent="SafeArea/Root/QuestPanel/VBox"]
@@ -47,11 +89,17 @@ theme_override_colors/font_color = Color(0.72, 0.4, 0.26, 1)
 theme_override_font_sizes/font_size = 22
 text = "QUEST_TITLE"
 
+[node name="Rule" type="ColorRect" parent="SafeArea/Root/QuestPanel/VBox"]
+custom_minimum_size = Vector2(0, 2)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.72, 0.4, 0.26, 0.35)
+
 [node name="QuestText" type="Label" parent="SafeArea/Root/QuestPanel/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
-theme_override_font_sizes/font_size = 25
+theme_override_font_sizes/font_size = 24
 text = "QUEST_EXPLORE"
 autowrap_mode = 3
 
@@ -119,21 +167,40 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="LookHint" type="Label" parent="SafeArea/Root"]
+[node name="LookHintCard" type="PanelContainer" parent="SafeArea/Root"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -220.0
+offset_left = -230.0
 offset_top = 6.0
-offset_right = 220.0
-offset_bottom = 40.0
+offset_right = 230.0
+offset_bottom = 58.0
 grow_horizontal = 2
-theme_override_colors/font_color = Color(0.3, 0.2, 0.14, 0.75)
-theme_override_font_sizes/font_size = 22
+mouse_filter = 2
+script = ExtResource("3_panel")
+padding = Vector2(22, 8)
+blob_seed = 9.4
+card = true
+
+[node name="HBox" type="HBoxContainer" parent="SafeArea/Root/LookHintCard"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 10
+mouse_filter = 2
+
+[node name="MouseIcon" type="Control" parent="SafeArea/Root/LookHintCard/HBox"]
+custom_minimum_size = Vector2(26, 36)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("5_mouse")
+
+[node name="LookHint" type="Label" parent="SafeArea/Root/LookHintCard/HBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 23
 text = "HINT_CLICK_TO_LOOK"
-horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="DebugLabel" type="Label" parent="SafeArea/Root"]
 unique_name_in_owner = true

@@ -76,6 +76,8 @@ func _input(event: InputEvent) -> void:
 		return
 	if event is InputEventScreenTouch:
 		var local := make_input_local(event) as InputEventScreenTouch
+		if local.pressed and _over_hud_button(event.position):
+			return  # HUD butonu (ör. görev ikonu) dokunuşu kendisi alsın
 		if local.pressed:
 			_on_touch_down(local.index, local.position)
 		else:
@@ -91,6 +93,17 @@ func _input(event: InputEvent) -> void:
 		elif local.index == _look_index:
 			InputManager.add_touch_look(local.relative)
 		get_viewport().set_input_as_handled()
+
+
+## "touch_ui" grubundaki görünür HUD kontrollerinin üstündeki dokunuşlar GUI'ye bırakılır.
+func _over_hud_button(screen_pos: Vector2) -> bool:
+	for c in get_tree().get_nodes_in_group(&"touch_ui"):
+		var ctrl := c as Control
+		if ctrl and ctrl.is_visible_in_tree():
+			var local := ctrl.get_global_transform_with_canvas().affine_inverse() * screen_pos
+			if Rect2(Vector2.ZERO, ctrl.size).grow(8.0).has_point(local):
+				return true
+	return false
 
 
 func _on_touch_down(index: int, p: Vector2) -> void:

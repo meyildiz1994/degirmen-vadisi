@@ -3,13 +3,16 @@ extends CanvasLayer
 ## duraklatma menüsü ve geliştirici bilgisi (FPS / draw call / kalite).
 
 @onready var quest_text: Label = %QuestText
+@onready var quest_panel: Control = %QuestPanel
+@onready var quest_button: Button = %QuestButton
+@onready var new_quest_bubble: Control = %NewQuestBubble
 @onready var hint_panel: Control = %HintPanel
 @onready var hint_label: Label = %HintLabel
 @onready var hint_glyph: GlyphBadge = %HintGlyph
 @onready var toast_panel: Control = %ToastPanel
 @onready var toast_label: Label = %ToastLabel
 @onready var debug_label: Label = %DebugLabel
-@onready var look_hint: Label = %LookHint
+@onready var look_hint: Control = %LookHintCard
 @onready var pause_menu: Control = %PauseMenu
 @onready var resume_button: Button = %ResumeButton
 @onready var quality_button: Button = %QualityButton
@@ -19,6 +22,9 @@ extends CanvasLayer
 var player: Player
 var _toast_tween: Tween
 var _focus: Interactable
+var _quest_open := false
+var _quest_tween: Tween
+var _bubble_tween: Tween
 
 
 func _ready() -> void:
@@ -26,6 +32,9 @@ func _ready() -> void:
 	hint_panel.visible = false
 	toast_panel.modulate.a = 0.0
 	pause_menu.visible = false
+	quest_panel.visible = false
+	new_quest_bubble.modulate.a = 0.0
+	quest_button.pressed.connect(toggle_quest_log)
 	debug_label.visible = OS.is_debug_build()
 	touch_button.visible = not GameState.is_mobile
 	GameState.quest_changed.connect(_on_quest_changed)
@@ -47,8 +56,46 @@ func bind_player(p: Player) -> void:
 	p.interacted_with.connect(_on_interacted)
 
 
+## Yeni görev: metni güncelle, ikonda bildirim rozeti ve kısa "Yeni görev!" balonu göster.
 func _on_quest_changed(key: String) -> void:
 	quest_text.text = key
+	if _quest_open:
+		return
+	quest_button.has_new = true
+	if _bubble_tween and _bubble_tween.is_valid():
+		_bubble_tween.kill()
+	_bubble_tween = create_tween()
+	_bubble_tween.tween_interval(1.0)
+	_bubble_tween.tween_property(new_quest_bubble, "modulate:a", 1.0, 0.35)
+	_bubble_tween.tween_interval(4.0)
+	_bubble_tween.tween_property(new_quest_bubble, "modulate:a", 0.0, 0.6)
+
+
+func toggle_quest_log() -> void:
+	set_quest_log_open(not _quest_open)
+
+
+func set_quest_log_open(open: bool) -> void:
+	_quest_open = open
+	AudioManager.play_ui("panel_open" if open else "panel_close")
+	if open:
+		quest_button.has_new = false
+		new_quest_bubble.modulate.a = 0.0
+		if _bubble_tween and _bubble_tween.is_valid():
+			_bubble_tween.kill()
+	if _quest_tween and _quest_tween.is_valid():
+		_quest_tween.kill()
+	_quest_tween = create_tween().set_parallel(true)
+	quest_panel.pivot_offset = Vector2(quest_panel.size.x - 30.0, 0.0)
+	if open:
+		quest_panel.visible = true
+		quest_panel.modulate.a = 0.0
+		quest_panel.scale = Vector2(0.9, 0.9)
+		_quest_tween.tween_property(quest_panel, "modulate:a", 1.0, 0.22)
+		_quest_tween.tween_property(quest_panel, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	else:
+		_quest_tween.tween_property(quest_panel, "modulate:a", 0.0, 0.18)
+		_quest_tween.chain().tween_callback(quest_panel.hide)
 
 
 func _on_focus_changed(target: Interactable) -> void:
@@ -103,6 +150,9 @@ func set_paused(paused: bool) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
 		set_paused(not get_tree().paused)
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("quest_log") and not get_tree().paused:
+		toggle_quest_log()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("inventory") and not get_tree().paused:
 		AudioManager.play_ui("inventory_open")
