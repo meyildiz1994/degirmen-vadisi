@@ -1,0 +1,16 @@
+{
+	"version": 1,
+	"comment": "Onarım noktaları. Her yuva bir kalıp ister ve özellik eşikleri gösterir. Eşiği tutmayan parça da takılabilir; 'zayıf' olur ve oyuncu köprüyü crack_after_crossings kez geçtikten sonra çatlar.",
+	"crack_after_crossings": 2,
+	"sites": {
+		"bridge": {
+			"name": "NAME_BRIDGE",
+			"achievement": "ACH_BRIDGE_REPAIRED",
+			"slots": [
+				{"id": "beam_north", "name": "REPAIR_BEAM_NORTH", "mold": "beam", "needs": {"strength": 5, "flexibility": 2}},
+				{"id": "beam_south", "name": "REPAIR_BEAM_SOUTH", "mold": "beam", "needs": {"strength": 5, "flexibility": 2}},
+				{"id": "link", "name": "REPAIR_LINK", "mold": "connector", "needs": {"strength": 4, "flexibility": 4}}
+			]
+		}
+	}
+}

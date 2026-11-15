@@ -88,10 +88,18 @@ func _build_bounds() -> void:
 
 
 ## Dere boyunca iki kıyıya ince duvarlar: oyuncu suya girmez, köprü tek geçiş olur.
+## Köprünün önünde boşluk bırakılır; geçişi köprünün kendi yan duvarları ve kapıları yönetir.
 func _build_river_barriers() -> void:
-	var z := -PLAY_LIMIT
-	var seg := 1.5
-	while z < PLAY_LIMIT:
+	var gap := ValleyShape.BRIDGE_GAP_HALF
+	_river_barrier_range(-PLAY_LIMIT, ValleyShape.BRIDGE_Z - gap)
+	_river_barrier_range(ValleyShape.BRIDGE_Z + gap, PLAY_LIMIT)
+
+
+func _river_barrier_range(z_from: float, z_to: float) -> void:
+	var count := maxi(int(ceil((z_to - z_from) / 1.5)), 1)
+	var seg := (z_to - z_from) / count
+	for i in count:
+		var z := z_from + i * seg
 		var z2 := z + seg
 		for side: float in [-1.0, 1.0]:
 			var p1 := Vector2(ValleyShape.river_x(z) + side * (ValleyShape.river_half_width(z) + 0.25), z)
@@ -99,5 +107,5 @@ func _build_river_barriers() -> void:
 			var mid := (p1 + p2) * 0.5
 			var dir := p2 - p1
 			var y := ValleyShape.water_y(mid.y) + 1.0
-			_add_box(Vector3(mid.x, y, mid.y), Vector3(0.3, 4.0, dir.length() + 0.3), atan2(dir.x, dir.y))
-		z = z2
+			# Uçlarda 0.15 taşma: segmentler arasında aralık kalmasın, ama köprü boşluğuna girmesin.
+			_add_box(Vector3(mid.x, y, mid.y), Vector3(0.3, 4.0, dir.length() + 0.15), atan2(dir.x, dir.y))

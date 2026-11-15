@@ -24,6 +24,8 @@ signal interacted_with(target: Interactable)
 var yaw := 0.0
 var pitch := -0.28
 var focus: Interactable = null
+## Fare imlecinin altındaki hedef (yalnızca klavye/fare ile).
+var hovered: Interactable = null
 var input_enabled := true
 var gather: GatherController
 var _walk_phase := 0.0
@@ -98,12 +100,17 @@ func _animate(delta: float) -> void:
 		_footstep()
 	if gather.active():
 		model.set_windup(gather.ring_phase())
+	else:
+		model.end_session()
+	_update_held()
+	_update_impact_shake(delta)
 	var bob := sin(_walk_phase * 2.0) * 0.045 * clampf(speed / walk_speed, 0.0, 1.0)
 	model.position.y = bob
 	model.rotation.z = sin(_walk_phase) * 0.04 * clampf(speed / walk_speed, 0.0, 1.0)
 
 
-## Menzildeki en yakın etkileşim noktasını otomatik hedefle.
+## Menzildeki en yakın etkileşim noktasını otomatik hedefle. Fare imleci menzildeki
+## bir hedefin üstündeyse o hedef öncelikli (sol tıkla etkileşilir).
 func _update_focus() -> void:
 	var best: Interactable = null
 	var best_d := INF
@@ -121,35 +128,100 @@ func _update_focus() -> void:
 		if d < it.radius and d + it.focus_bias < best_d:
 			best = it
 			best_d = d + it.focus_bias
+	hovered = _hovered_target() if InputManager.is_pointer_mode() and input_enabled else null
+	if hovered != null:
+		best = hovered
 	if best != focus:
 		focus = best
 		focus_changed.emit(focus)
 
 
+const HOVER_PX := 80.0   ## 720p'de imlecin hedefe en fazla bu kadar piksel uzak olması
+
+
+func _hovered_target() -> Interactable:
+	var vp := get_viewport()
+	var mouse := vp.get_mouse_position()
+	var limit := HOVER_PX * vp.get_visible_rect().size.y / 720.0
+	var best: Interactable = null
+	var best_d := limit
+	for node in get_tree().get_nodes_in_group(Interactable.GROUP):
+		var it := node as Interactable
+		if not it.can_focus() or it.global_position.distance_to(global_position) >= it.radius:
+			continue
+		var p := it.global_position + Vector3(0, 0.4, 0)
+		if camera.is_position_behind(p):
+			continue
+		var d := camera.unproject_position(p).distance_to(mouse)
+		if d < best_d:
+			best = it
+			best_d = d
+	return best
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not input_enabled:
 		return
-	if not event.is_action_pressed("interact"):
+	var click := InputManager.is_click_interact(event)
+	if not event.is_action_pressed("interact") and not click:
 		return
+	# Fareyle: oturum sürerken her tık vuruştur; yoksa yalnızca imlecin altındaki hedef.
+	var target := focus
+	if click and not gather.active():
+		if hovered == null:
+			return
+		target = hovered
 	if gather.active():
 		gather.on_interact_pressed(gather.target)
-	elif focus is Gatherable:
-		gather.on_interact_pressed(focus as Gatherable)
-	elif focus != null:
-		focus.interact(self)
-		interacted_with.emit(focus)
+	elif target is Gatherable:
+		gather.on_interact_pressed(target as Gatherable)
+	elif target != null:
+		target.interact(self)
+		interacted_with.emit(target)
 	else:
 		return
 	get_viewport().set_input_as_handled()
 
 
 # --- Toplama animasyonu kancaları (GatherController çağırır) --------------------------
-func set_held_tool(kind: String) -> void:
-	model.set_held_tool(kind)
+## Elde ne var: oturumdaki alet, yoksa odaktaki kaynağın istediği en iyi alet.
+## Böylece oyuncu bir ağaca yaklaşınca baltasını eline alır ("baltam var" görünür).
+func _update_held() -> void:
+	var t: ToolItem = null
+	if gather.active():
+		t = gather.tool
+	elif focus is Gatherable and not (focus as Gatherable).is_hand():
+		var g := focus as Gatherable
+		t = GameState.inventory.best_tool(g.tool_kind(), g.resource_id)
+	if t == null:
+		model.set_held_tool("")
+	else:
+		model.set_held_tool(t.kind, t.head)
 
 
-func play_swing() -> void:
-	model.strike()
+func set_held_tool(_kind: String) -> void:
+	_update_held()
+
+
+func play_swing(sweet := false) -> void:
+	model.strike(sweet)
+	_impact = 0.16 if sweet else 0.11
+
+
+var _impact := 0.0
+
+
+## Darbe anında kamerada çok kısa, küçük bir sarsıntı (rahatsız etmeyecek kadar).
+func _update_impact_shake(delta: float) -> void:
+	if _impact <= 0.0:
+		return
+	_impact = maxf(_impact - delta, 0.0)
+	var k := _impact / 0.16
+	camera.h_offset = sin(_impact * 170.0) * 0.035 * k
+	camera.v_offset = cos(_impact * 130.0) * 0.03 * k
+	if _impact <= 0.0:
+		camera.h_offset = 0.0
+		camera.v_offset = 0.0
 
 
 func play_pickup() -> void:

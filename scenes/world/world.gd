@@ -2,7 +2,7 @@ extends Node3D
 ## Vadi sahnesinin kurucusu: arazi, dere, bitki örtüsü, yapılar, ambiyans ve oyuncu.
 ## Her sistem kendi sahnesinde/script'inde; burası onları yerleştirip birbirine bağlar.
 
-const BRIDGE_Z := 8.0
+const BRIDGE_Z := ValleyShape.BRIDGE_Z
 const MILL_Z := -8.0
 const WORKSHOP_POS := Vector2(-13.0, 4.0)
 const PLAYER_SPAWN := Vector2(-9.5, 9.5)
@@ -10,7 +10,7 @@ const PLAYER_SPAWN := Vector2(-9.5, 9.5)
 @onready var vegetation: Node3D = $Vegetation
 @onready var props: Node3D = $ResourceProps
 @onready var mill: Node3D = $Mill
-@onready var bridge: Node3D = $Bridge
+@onready var bridge: RepairSite = $Bridge
 @onready var workshop: Node3D = $Workshop
 @onready var player: Player = $Player
 @onready var hud: CanvasLayer = $HUD
@@ -39,7 +39,12 @@ func _ready() -> void:
 	_build_gathering()
 	player.focus_changed.connect(func(t): touch.set_interact_available(t != null))
 	SaveSystem.restore_persisted_nodes()
-	tutorial.setup(hud, gather_world, workshop.interactable, player)
+	bridge.player = player
+	bridge.open_requested.connect(hud.open_repair)
+	var iron := Vector3(props.IRON_SPOT.x, 0, props.IRON_SPOT.y)
+	iron.y = ValleyShape.height(iron.x, iron.z) + 0.8
+	tutorial.setup(hud, gather_world, workshop.interactable, player, bridge, mill.interactable, iron)
+	hud.quest_marker.tutorial = tutorial
 	AudioManager.play_music("music_explore")
 	if ScreenshotCapture.requested():
 		add_child(ScreenshotCapture.new())

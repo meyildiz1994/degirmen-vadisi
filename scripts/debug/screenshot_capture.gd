@@ -7,6 +7,8 @@ extends Node
 ## Toplama sahneleri: --player=x,z,yaw_derece  --give=1 (taş aletler + malzeme)
 ##   --hits=N (odaktaki kaynağa N vuruş)  --fell=N (en yakın N ağacı kes)
 ##   --inventory_open=1  --ring=0.85 (oturum açık, halka bu aşamada dondurulur)
+## Onarım: --step=5 (eğitim adımı)  --bridge=oak,pine,copper (kuzey, güney, bağlantı; "-" boş)
+##   --repair_open=1 (onarım panelini aç)  --repair_slot=beam_south  --crack=1
 
 var _args := {}
 var _near: Gatherable
@@ -114,13 +116,24 @@ func _gather_scenario() -> void:
 			player.gather.on_interact_pressed(focus_g)
 		player.gather.set_physics_process(false)
 		player.gather.cycle = player.gather.swing * float(_args["ring"])
+	if _args.has("step"):
+		GameState.tutorial_step = int(_args["step"])
+		GameState.set_quest(Tutorial.QUESTS[GameState.tutorial_step])
+	if _args.has("mouse"):
+		var mv: PackedFloat64Array = str(_args["mouse"]).split_floats(",")
+		get_viewport().warp_mouse(Vector2(mv[0], mv[1]))
+	if _args.has("cursor_png"):
+		var img := CursorArt._arrow_image()
+		img.resize(160, 160, Image.INTERPOLATE_NEAREST)
+		img.save_png(str(_args["cursor_png"]))
 	if _args.has("workshop"):
 		# --workshop=kalıp[,seçim1,seçim2]  örn. axe_head,iron,handle:oak
 		var parts := str(_args["workshop"]).split(",")
 		var inv := GameState.inventory
 		for id: String in ["iron", "copper", "oak", "pine", "stone"]:
 			inv.add(id, 6)
-		inv.add_part("handle:oak", 1)
+		if not _args.has("step"):
+			inv.add_part("handle:oak", 1)
 		inv.add_part("handle:branch", 2)
 		var hud = world.get_node("HUD")
 		hud.open_workshop()
@@ -128,8 +141,72 @@ func _gather_scenario() -> void:
 		for i in range(1, parts.size()):
 			hud.workshop_panel.active_slot = i - 1
 			hud.workshop_panel.choose(parts[i])
+	if _args.has("craft"):
+		world.get_node("HUD").workshop_panel._on_craft()
+	if _args.has("side_cam"):
+		# Oyuncuyu yandan gösteren kamera (animasyon kareleri için). Değer: uzaklık.
+		var d := float(_args["side_cam"])
+		var basis := Basis(Vector3.UP, player.model.rotation.y)
+		var at := player.global_position + Vector3(0, 0.95, 0)
+		var cam := Camera3D.new()
+		cam.fov = 50.0
+		world.add_child(cam)
+		cam.look_at_from_position(at + basis * Vector3(d, 0.35, -d * 0.35), at)
+		cam.make_current()
+	if _args.has("anim"):
+		await _anim_pose(player, str(_args["anim"]))
+	if _args.has("bridge") or _args.has("repair_open"):
+		await _bridge_scenario(world)
 	if _args.has("inventory_open"):
 		world.get_node("HUD").toggle_inventory()
+
+
+## --anim=strike:0.05 | pickup:0.25 | windup:0.9 — pozu o anda dondur (animasyon karesi).
+func _anim_pose(player: Player, spec: String) -> void:
+	var kv := spec.split(":")
+	var t := float(kv[1]) if kv.size() > 1 else 0.1
+	var m = player.model
+	if GameState.inventory.best_tool("axe", "oak_tree") != null:
+		m.set_held_tool("axe", GameState.inventory.best_tool("axe", "oak_tree").head)
+	player.set_process(false)  # elde alet seçimini ezmesin
+	match kv[0]:
+		"strike":
+			m.set_windup(1.0)
+			await get_tree().create_timer(0.4).timeout
+			m.strike(true)
+		"pickup":
+			m.pickup()
+		"windup":
+			m.set_windup(t)
+			t = 0.5
+	await get_tree().create_timer(t).timeout
+	m.set_process(false)
+
+
+func _bridge_scenario(world: Node) -> void:
+	var bridge: RepairSite = world.get_node("Bridge")
+	var inv := GameState.inventory
+	var mats := str(_args.get("bridge", "")).split(",", false)
+	var slot_ids := ["beam_north", "beam_south", "link"]
+	for i in mini(mats.size(), slot_ids.size()):
+		if mats[i] == "-":
+			continue
+		var mold_id := str(Repair.slot_def("bridge", slot_ids[i])["mold"])
+		var key := Crafting.part_key(mold_id, mats[i])
+		inv.add_part(key, 1)
+		bridge.install(slot_ids[i], key)
+	for key: String in ["beam:oak", "beam:pine", "beam:stone", "connector:copper", "connector:reed"]:
+		inv.add_part(key, 1)
+	if _args.has("crack"):
+		bridge.crack_weak_parts()
+		await get_tree().create_timer(1.5).timeout
+	if _args.has("repair_open"):
+		var hud = world.get_node("HUD")
+		hud.open_repair(bridge)
+		if _args.has("repair_slot"):
+			hud.repair_panel.select_slot(str(_args["repair_slot"]))
+		if _args.has("repair_choice"):
+			hud.repair_panel.choose(str(_args["repair_choice"]))
 
 
 ## Oyuncuyu verilen türdeki en yakın kaynağın 1.9 m önüne, ona bakacak şekilde koy.

@@ -24,7 +24,7 @@ TOUCH_INTERACT,Etkileşim,Interact
 TOUCH_INVENTORY,Heybe,Bag
 TOUCH_PREVIEW_OFF,Dokunmatik önizleme: kapalı (F2),Touch preview: off (F2)
 TOUCH_PREVIEW_ON,Dokunmatik önizleme: açık (F2),Touch preview: on (F2)
-HINT_CLICK_TO_LOOK,Etrafa bakmak için oyun alanına tıkla,Click the game view to look around
+HINT_CLICK_TO_LOOK,Etrafa bakmak için sağ tuşu basılı tutup sürükle,Hold the right mouse button and drag to look around
 ACTION_GATHER,Topla,Gather
 ACTION_CHOP,Kes,Chop
 ACTION_MINE,Kır,Mine
@@ -97,3 +97,55 @@ WORKSHOP_CHOOSE,Seç,Choose
 WORKSHOP_MADE,Yapıldı,Made
 WORKSHOP_FILL_SLOTS,"Yuvalara malzeme koy, sonucu burada gör.",Put materials in the slots to see the result here.
 WORKSHOP_NEED_HANDLE,Önce Sap kalıbıyla bir sap yap.,Make a handle with the Handle mold first.
+NAME_BRIDGE_FIXED,Köprü,Bridge
+ACTION_REPAIR,Onar,Repair
+REPAIR_BEAM_NORTH,Kuzey Kiriş,North Beam
+REPAIR_BEAM_SOUTH,Güney Kiriş,South Beam
+REPAIR_LINK,Bağlantı,Joint
+REPAIR_POINTS,Onarım yerleri,Repair points
+REPAIR_NEEDS,İstenen,Required
+REPAIR_PARTS,Heybedeki parçalar,Parts in your bag
+REPAIR_SELECTED,Seçilen parça,Selected part
+REPAIR_INSTALL,Yerleştir,Install
+REPAIR_INSTALLED,Takılı,Installed
+REPAIR_CRACKED,Çatladı! Yenisini tak.,Cracked! Fit a new one.
+REPAIR_NO_PARTS,Bu yer için parça yok. Atölyede yap:,No parts for this spot. Make one at the workshop:
+REPAIR_WEAK_WARNING,"Bu parça istenenleri karşılamıyor. Bir süre dayanır, sonra çatlar.","This part falls short. It will hold for a while, then crack."
+REPAIR_GOOD,Sağlam görünüyor.,Looks sturdy.
+REPAIR_PICK_PART,Bir parça seç.,Pick a part.
+MSG_BRIDGE_REPAIRED,Köprü onarıldı! Karşı kıyıya geçebilirsin.,The bridge is repaired! You can cross to the far bank.
+MSG_BRIDGE_CRACKED,Çatırtı! Zayıf bir parça dayanamadı ve köprü yine çöktü.,Crack! A weak part gave way and the bridge collapsed again.
+QUEST_REPAIR_BRIDGE,"Köprüyü onar: atölyede 2 kiriş ve 1 bağlantı yap, köprüye tak.","Repair the bridge: make 2 beams and 1 joint at the workshop, then fit them."
+QUEST_REACH_IRON,Köprüden geç ve karşı kıyıdaki demir damarını kaz.,Cross the bridge and mine the iron vein on the far bank.
+ACHIEVEMENT_UNLOCKED,Başarım,Achievement
+ACH_BRIDGE_REPAIRED,Karşı Kıyı,The Far Bank
+PROP_WEIGHT,Ağırlık,Weight
+PROP_HARDNESS,Sertlik,Hardness
+PROP_FLEXIBILITY,Esneklik,Flex
+PROP_DURABILITY,Dayanım,Durability
+PROP_WORKABILITY,İşlenme,Workability
+MAT_GOOD_FOR,İyi olduğu yer,Good for
+MAT_OAK_HINT,"Sağlam ve dengeli ağaç. Kiriş, bağlantı ve çark kanadı için iyi.","Strong, balanced wood. Good for beams, joints and wheel paddles."
+MAT_PINE_HINT,"Hafif ve kolay işlenir ama çabuk çürür. Saplar için iyi, kiriş için zayıf.","Light and easy to work, but rots fast. Good for handles, weak for beams."
+MAT_STONE_HINT,"Çok sert ve ağır, hiç esnemez. İlk balta ve kazma başı için iyi; kirişte kırılır.","Very hard and heavy, never bends. Good for first axe and pickaxe heads; snaps as a beam."
+MAT_COPPER_HINT,"Esnek, kolay işlenir ama yumuşak. Bağlantı ve dişli için iyi; alet ağzı çabuk körelir.",Flexible and workable but soft. Good for joints and gears; tool edges dull quickly.
+MAT_IRON_HINT,Sert ve dayanıklı. En iyi balta/kazma başı ve sağlam kirişler.,Hard and tough. The best axe/pickaxe heads and sturdy beams.
+MAT_CLAY_HINT,Yumuşak ve şekil alır. Değirmen duvarını örerken taşla birlikte kullanılacak.,Soft and shapeable. Will bind stones when rebuilding the mill wall.
+MAT_REED_HINT,Çok hafif ve esnek. Hafif saplar için iyi; bağlantı olarak zayıf.,Very light and flexible. Good for light handles; weak as a joint.
+MAT_BRANCH_HINT,Hafif ve esnek. İlk aletlerin sapı için ideal.,Light and flexible. Ideal handles for your first tools.
+MOLD_HANDLE_DESC,Aletlerin sapı. Hafif ve esnek malzeme vuruşu hızlandırır.,"Tool handles. Light, flexible materials swing faster."
+MOLD_AXE_HEAD_DESC,Balta yapar: ağaç kesmek için. Baş ne kadar sertse o kadar az vuruş.,Makes an axe for chopping trees. Harder heads need fewer hits.
+MOLD_PICKAXE_HEAD_DESC,Kazma yapar: kaya ve maden damarı kırmak için.,Makes a pickaxe for breaking rocks and ore veins.
+MOLD_BEAM_DESC,Taşıyıcı kiriş. Köprü ve değirmen onarımında kullanılır; sağlam ve biraz esnek olmalı.,Load-bearing beam for the bridge and mill; must be strong and a little flexible.
+MOLD_CONNECTOR_DESC,Parçaları birbirine bağlar. Köprünün ortası ve çark için.,Joins parts together. For the bridge centre and the wheel.
+MOLD_PADDLE_DESC,Değirmen çarkının kanadı. Hafif ve suya dayanıklı olmalı.,Mill wheel paddle. Must be light and water-resistant.
+MOLD_GEAR_DESC,Değirmenin dişlisi. Hassas işlenmiş ve sağlam olmalı.,The mill's gear. Must be precise and strong.
+CRAFTED_TOOL_HINT,Heybende. Ağaca ya da kayaya yaklaşınca kendiliğinden eline alırsın.,In your bag. You'll take it in hand automatically near a tree or rock.
+CRAFTED_PART_HINT,Heybende. Onarım yerine götürüp takabilirsin.,In your bag. Take it to a repair spot to fit it.
+CRAFTED_TAP_TO_CLOSE,(kapatmak için dokun),(tap to close)
+QUEST_IRON_TOOLS,Demirle yeni bir balta ya da kazma yap: Tahmin çubuklarında farkı gör.,Make an iron axe or pickaxe: see the difference in the prediction bars.
+QUEST_VISIT_MILL,Derenin kuzeyindeki eski değirmene git ve onu incele.,Go to the old mill north along the stream and inspect it.
+MSG_IRON_TOOL_MADE,Demir alet! Ağaçlar artık çok daha az vuruşta devriliyor.,An iron tool! Trees now fall in far fewer hits.
+TOOLBELT_EMPTY,Alet yok,No tools
+QUEST_MILL_NEXT,"Değirmenin çarkı kırık: kürekler, bir dişli ve bir mil gerekecek. Vadide dolaş, iyi malzeme biriktir.","The mill wheel is broken: it will need paddles, a gear and an axle. Roam the valley and stock up on good materials."
+MSG_MILL_SEEN,Değirmen seni bekliyor! Çarkı onarmak için kalıp atölyesinde kürek ve dişli kalıpları var.,The mill is waiting for you! The workshop has paddle and gear molds for the wheel.

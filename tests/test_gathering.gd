@@ -104,6 +104,13 @@ func _run() -> void:
 	world.workshop.interactable.interact(player)
 	var wp: WorkshopPanel = world.hud.workshop_panel
 	check(wp.is_open and wp.highlight_mold == "handle", "atölye paneli açıldı, Sap kalıbı vurgulu")
+	await _frames(2)
+	var gt: Control = wp._guide_target()
+	check(wp.guide_enabled and gt != null and gt == wp._craft_button, "yol gösterici Üret'i gösteriyor (dal kendiliğinden kondu)")
+	wp.select_mold("beam")
+	await _frames(2)
+	check(wp._guide_target() == wp._mold_buttons["handle"], "başka kalıba geçince vurgulu kalıbı gösteriyor")
+	wp.select_mold("handle")
 	check(not Crafting.craft(gs.inventory, "axe_head", ["stone", ""]).size(), "eksik yuvayla üretilmez")
 	check(Crafting.craft(gs.inventory, "handle", ["branch"]).get("key", "") == "handle:branch", "dal sap yapıldı")
 	check(Crafting.craft(gs.inventory, "handle", ["branch"]).size() > 0, "ikinci sap")
@@ -150,7 +157,172 @@ func _run() -> void:
 	var before: int = gw.tree_field.planted_list().size()
 	gw._on_planted("acorn", Vector3(-6.0, ValleyShape.height(-6.0, 12.0), 12.0))
 	check(gw.tree_field.planted_list().size() == before + 1, "palamut dikildi")
+	await _test_bridge(world, player)
+	await _test_mouse(player)
+	await _test_polish(world, player)
 	# Ritim kapalı: basılı tutunca vurur
 	gs.set_rhythm_hits(false)
 	print("\nSonuç: %s (%d hata)" % ["BAŞARILI" if _fails == 0 else "BAŞARISIZ", _fails])
 	get_tree().quit(1 if _fails else 0)
+
+
+## Köprü onarımı: eşikler, zayıf parça, geçiş, çatlama, kayıt.
+func _test_bridge(world: Node, player: Player) -> void:
+	print("== köprü onarımı")
+	var n_beam := Repair.needs("bridge", "beam_north")
+	var n_link := Repair.needs("bridge", "link")
+	check(Repair.meets("beam:oak", n_beam), "meşe kiriş istenenleri karşılar")
+	check(not Repair.meets("beam:pine", n_beam), "çam kiriş zayıf (güç az)")
+	check(Repair.failing("beam:stone", n_beam) == ["flexibility"], "taş kiriş kırılgan (esneklik az)")
+	check(Repair.meets("connector:copper", n_link) and not Repair.meets("connector:reed", n_link), "bakır bağlantı sağlam, saz zayıf")
+	var bridge: RepairSite = world.get_node("Bridge")
+	var inv: Inventory = gs.inventory
+	var bx := ValleyShape.river_x(ValleyShape.BRIDGE_Z)
+	var start := Vector3(bx - 6.0, 0, ValleyShape.BRIDGE_Z)
+	check(not await _walk_across(player, start), "yıkık köprüden geçilemez")
+	check(player.global_position.y > ValleyShape.WATER_LEVEL, "oyuncu dereye düşmedi")
+	world.hud.open_repair(bridge)
+	var rp: RepairPanel = world.hud.repair_panel
+	check(rp.is_open and rp.slot_id == "beam_north" and rp.choice == "", "onarım paneli açıldı, parça yok")
+	inv.add_part("beam:oak", 1)
+	inv.add_part("beam:pine", 1)
+	inv.add_part("connector:copper", 1)
+	rp.select_slot("beam_north")
+	check(rp.choice == "beam:oak", "en uygun parça önce seçili")
+	rp._on_install()
+	check(Repair.is_filled(bridge.state, "beam_north") and inv.part_count("beam:oak") == 0, "kuzey kiriş takıldı, heybeden düştü")
+	check(rp.slot_id == "beam_south" and rp.choice == "beam:pine", "sıradaki yere geçti")
+	rp._on_install()
+	check(bool(Repair.slot_state(bridge.state, "beam_south")["weak"]), "çam kiriş zayıf olarak takıldı")
+	rp._on_install()
+	check(bridge.is_complete(), "köprü tamamlandı")
+	check(gs.tutorial_step == Tutorial.Step.IRON or gs.tutorial_step < Tutorial.Step.BRIDGE, "eğitim adımı ilerledi (%d)" % gs.tutorial_step)
+	await _frames(40)
+	check(await _walk_across(player, start), "onarılan köprüden karşıya geçildi")
+	check(not bridge.state["slots"]["beam_south"].has("cracked"), "doğu kıyıda çatlamaz")
+	var data := {}
+	bridge.save_state(data)
+	check(await _walk_across(player, start + Vector3(12.0, 0, 0), -1.0), "geri dönüldü")
+	await _frames(5)
+	check(Repair.is_cracked(bridge.state, "beam_south") and not bridge.is_complete(), "zayıf kiriş batı kıyıda çatladı")
+	check(Repair.is_filled(bridge.state, "beam_north"), "sağlam kiriş yerinde")
+	await _frames(90)
+	check(not await _walk_across(player, start), "çatlayınca geçiş yine kapandı")
+	bridge.load_state(data)
+	check(bridge.is_complete() and Repair.is_filled(bridge.state, "link"), "köprü kayıttan yüklendi")
+	check(data.get("repaired", []).has("bridge"), "onarılan yapı listesi")
+	rp.close_panel()
+
+
+## Oyuncuyu köprünün önüne koyup doğuya (dir=1) ya da batıya yürüt; karşı kıyıya vardı mı?
+func _walk_across(player: Player, from: Vector3, dir := 1.0) -> bool:
+	player.global_position = Vector3(from.x, ValleyShape.height(from.x, from.z) + 0.3, from.z)
+	player.velocity = Vector3.ZERO
+	player.yaw = -PI * 0.5 * dir
+	player.input_enabled = true
+	var goal := from.x + 12.0 * dir
+	Input.action_press("move_forward")
+	for i in 420:
+		await get_tree().physics_frame
+		player.yaw = -PI * 0.5 * dir
+		if (player.global_position.x - goal) * dir > 0.0:
+			break
+	Input.action_release("move_forward")
+	await get_tree().physics_frame
+	return (player.global_position.x - goal) * dir > -1.0
+
+
+## Fare: sağ tuşla sürükleyince bakış, imlecin altındaki hedefe sol tık = etkileşim.
+func _test_mouse(player: Player) -> void:
+	print("== fare")
+	InputManager.set_touch_preview(false)
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_RIGHT
+	press.pressed = true
+	Input.parse_input_event(press)
+	await _frames(1)
+	InputManager.consume_look(0.0)
+	var motion := InputEventMouseMotion.new()
+	motion.relative = Vector2(40, 0)
+	Input.parse_input_event(motion)
+	await _frames(1)
+	check(InputManager.consume_look(0.0).x > 0.0, "sağ tuşla sürükleyince kamera döner")
+	var release := press.duplicate()
+	release.pressed = false
+	Input.parse_input_event(release)
+	Input.parse_input_event(motion)
+	await _frames(1)
+	check(InputManager.consume_look(0.0) == Vector2.ZERO, "sağ tuş bırakılınca imleç serbest, bakış yok")
+	var clicked := [0]
+	var bridge_it: Interactable = player.get_parent().get_node("Bridge/InteractableWest")
+	bridge_it.interacted.connect(func(_by): clicked[0] += 1)
+	var left := InputEventMouseButton.new()
+	left.button_index = MOUSE_BUTTON_LEFT
+	left.pressed = true
+	player.hovered = null
+	player._unhandled_input(left)
+	check(clicked[0] == 0, "boşluğa sol tık bir şey yapmaz")
+	player.hovered = bridge_it
+	player._unhandled_input(left)
+	check(clicked[0] == 1, "imlecin altındaki hedefe sol tık = etkileşim")
+	player.get_parent().hud.repair_panel.close_panel()
+
+
+## Üretim netliği, elde alet, köprü sonrası hedefler, görev işaretçisi, animasyonlar.
+func _test_polish(world: Node, player: Player) -> void:
+	print("== netlik / yeni hedefler")
+	var gs := GameState
+	var inv := gs.inventory
+	var hud = world.hud
+	# Malzeme kartı
+	var card: MaterialCard = hud.inventory_panel._mat_card
+	card.show_item("oak")
+	check(card.visible and card._bars.get_child_count() == 5, "malzeme kartı: 5 özellik çubuğu")
+	check(card._hint.text != "" and not card._hint.text.begins_with("MAT_"), "malzeme kartı: 'neye yarar' notu çevrildi")
+	card.show_item("")
+	check(not card.visible, "boş seçimde kart gizli")
+	# Atölye: üretince "Yapıldı" kartı
+	inv.add("iron", 2)
+	inv.add_part("handle:branch", 1)
+	var wp: WorkshopPanel = hud.workshop_panel
+	world.workshop.interactable.interact(player)
+	wp.select_mold("axe_head")
+	wp.choices = ["iron", "handle:branch"]
+	wp._on_craft()
+	await _frames(2)
+	check(wp._made_popup != null and is_instance_valid(wp._made_popup) and wp._made_popup.visible, "üretim sonucu kartı göründü")
+	wp.close_panel()
+	await _frames(2)
+	check(wp._made_popup == null or not is_instance_valid(wp._made_popup) or wp._made_popup.is_queued_for_deletion(), "panel kapanınca kart da kapandı")
+	# Alet kemeri ve elde alet
+	check(hud.tool_belt.get_child_count() >= 2, "alet kemerinde balta ve kazma (%d)" % hud.tool_belt.get_child_count())
+	var tree: Gatherable = null
+	for g in world.gather_world._gatherables:
+		if g.tool_kind() == "axe" and g.state == Gatherable.State.READY:
+			tree = g
+			break
+	player.global_position = tree.global_position + Vector3(1.5, 0.2, 0)
+	await _frames(4)
+	check(player.focus == tree and player.model.held_tool_kind() == "axe", "ağaca yaklaşınca balta ele alındı")
+	player.global_position = Vector3(-6.0, ValleyShape.height(-6.0, 12.0) + 0.3, 12.0)
+	await _frames(4)
+	# Vuruş animasyonu sırası ve toparlanma
+	player.model.strike(true)
+	check(player.model.is_striking(), "vuruş zaman çizelgesi başladı")
+	await get_tree().create_timer(0.6).timeout
+	check(not player.model.is_striking(), "vuruş bitti, kol toparlandı")
+	player.model.pickup()
+	await get_tree().create_timer(1.2).timeout
+	check(absf(player.model._rig.rotation.x) < 0.1, "çömelip kalktı, gövde dik (%.2f)" % player.model._rig.rotation.x)
+	# Köprüden sonra: demir → demir alet → değirmen
+	var tut: Tutorial = world.tutorial
+	gs.tutorial_step = Tutorial.Step.IRON
+	tut._refresh()
+	check(gs.tutorial_step == Tutorial.Step.MILL, "demir balta zaten var: değirmen adımı (%d)" % gs.tutorial_step)
+	check(gs.current_quest_key == "QUEST_VISIT_MILL", "görev: değirmene git")
+	check(tut.goal_icon() == "mill" and tut.goal_position().distance_to(world.mill.interactable.global_position) < 2.0, "işaretçi değirmeni gösteriyor")
+	await _frames(3)
+	check(hud.quest_marker.visible, "görev işaretçisi görünür (uzakta)")
+	world.mill.interactable.interact(player)
+	check(gs.tutorial_step == Tutorial.Step.DONE and gs.current_quest_key == "QUEST_MILL_NEXT", "değirmen incelendi: sıradaki hedef")
+	check(tut.goal_position() == Vector3.INF, "son adımda işaretçi yok")

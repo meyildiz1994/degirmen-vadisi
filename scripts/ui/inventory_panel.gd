@@ -8,6 +8,8 @@ signal closed
 var _grid: GridContainer
 var _tools_box: VBoxContainer
 var _empty_label: Label
+var _mat_card: MaterialCard
+var _selected := ""
 var _card: WatercolorPanel
 var _tween: Tween
 var is_open := false
@@ -31,10 +33,18 @@ func _ready() -> void:
 	_card.padding = Vector2(34, 22)
 	_card.blob_seed = 3.3
 	center.add_child(_card)
+	var cols := HBoxContainer.new()
+	cols.add_theme_constant_override("separation", 22)
+	_card.add_child(cols)
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 10)
 	vb.custom_minimum_size = Vector2(560, 0)
-	_card.add_child(vb)
+	cols.add_child(vb)
+	_mat_card = MaterialCard.new()
+	_mat_card.width = 300.0
+	_mat_card.stacked = true
+	_mat_card.custom_minimum_size = Vector2(300, 0)
+	cols.add_child(_mat_card)
 	var head := HBoxContainer.new()
 	vb.add_child(head)
 	var title := Label.new()
@@ -145,6 +155,13 @@ func _rebuild() -> void:
 		_grid.add_child(_item_cell(key, inv.part_count(key)))
 		shown += 1
 	_empty_label.visible = shown == 0
+	if _selected == "" or (GameState.inventory.count(_selected) == 0 and GameState.inventory.part_count(_selected) == 0):
+		_selected = ""
+		for id: String in Materials.material_ids():
+			if inv.count(id) > 0:
+				_selected = id
+				break
+	_mat_card.show_item(_selected)
 	for t in inv.tools:
 		_tools_box.add_child(_tool_row(t))
 	var slots := HBoxContainer.new()
@@ -153,9 +170,20 @@ func _rebuild() -> void:
 	_tools_box.add_child(slots)
 
 
+## Eşyaya dokununca/üstüne gelince sağda malzeme kartı açılır (neye yarar).
 func _item_cell(id: String, n: int) -> Control:
+	var b := Button.new()
+	b.flat = true
+	b.toggle_mode = true
+	b.button_pressed = id == _selected
+	b.custom_minimum_size = Vector2(128, 62)
+	b.pressed.connect(_select.bind(id))
+	b.mouse_entered.connect(_mat_card.show_item.bind(id))
+	b.focus_entered.connect(_select.bind(id))
 	var row := HBoxContainer.new()
-	row.custom_minimum_size = Vector2(128, 60)
+	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(row)
 	var ic := ItemIcon.new()
 	ic.icon = id
 	ic.custom_minimum_size = Vector2(56, 56)
@@ -172,7 +200,12 @@ func _item_cell(id: String, n: int) -> Control:
 	name_l.modulate.a = 0.8
 	vb.add_child(name_l)
 	row.add_child(vb)
-	return row
+	return b
+
+
+func _select(id: String) -> void:
+	_selected = id
+	_mat_card.show_item(id)
 
 
 func _tool_row(t: ToolItem) -> Control:
