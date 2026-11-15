@@ -19,6 +19,7 @@ func _ready() -> void:
 	mi.material_override = WatercolorMaterials.vertex_colored(true)
 	add_child(mi)
 	var sb := StaticBody3D.new()
+	sb.set_meta("surface", "stone")
 	var cs := CollisionShape3D.new()
 	cs.shape = mi.mesh.create_trimesh_shape()
 	sb.add_child(cs)

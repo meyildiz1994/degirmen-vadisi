@@ -1,0 +1,19 @@
+{
+	"version": 1,
+	"comment": "Malzeme özellikleri 0-10 ölçeğinde. Alet ve parça istatistikleri bu değerlerden formülle hesaplanır (sabit tarif yok).",
+	"properties": ["weight", "hardness", "flexibility", "durability", "workability"],
+	"materials": {
+		"oak":    {"name": "MAT_OAK",    "icon": "log",    "color": [0.68, 0.42, 0.24], "weight": 6, "hardness": 5, "flexibility": 4, "durability": 7, "workability": 6},
+		"pine":   {"name": "MAT_PINE",   "icon": "log",    "color": [0.86, 0.66, 0.40], "weight": 3, "hardness": 3, "flexibility": 6, "durability": 4, "workability": 8},
+		"stone":  {"name": "MAT_STONE",  "icon": "stone",  "color": [0.70, 0.68, 0.66], "weight": 9, "hardness": 8, "flexibility": 0, "durability": 9, "workability": 2},
+		"copper": {"name": "MAT_COPPER", "icon": "ore",    "color": [0.94, 0.50, 0.22], "weight": 7, "hardness": 4, "flexibility": 5, "durability": 5, "workability": 7},
+		"iron":   {"name": "MAT_IRON",   "icon": "ore",    "color": [0.62, 0.28, 0.22], "weight": 8, "hardness": 8, "flexibility": 3, "durability": 8, "workability": 3},
+		"clay":   {"name": "MAT_CLAY",   "icon": "lump",   "color": [0.86, 0.48, 0.30], "weight": 5, "hardness": 1, "flexibility": 7, "durability": 3, "workability": 10},
+		"reed":   {"name": "MAT_REED",   "icon": "reed",   "color": [0.80, 0.72, 0.38], "weight": 1, "hardness": 1, "flexibility": 9, "durability": 3, "workability": 9},
+		"branch": {"name": "MAT_BRANCH", "icon": "branch", "color": [0.60, 0.40, 0.24], "weight": 2, "hardness": 2, "flexibility": 6, "durability": 3, "workability": 9}
+	},
+	"seeds": {
+		"acorn":     {"name": "SEED_ACORN",     "icon": "acorn", "color": [0.62, 0.44, 0.22], "grows": "oak_tree"},
+		"pine_cone": {"name": "SEED_PINE_CONE", "icon": "cone",  "color": [0.52, 0.34, 0.20], "grows": "pine_tree"}
+	}
+}

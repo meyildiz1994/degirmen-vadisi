@@ -1,10 +1,11 @@
 extends Node
-## Global oyun durumu: kalite ayarı, aktif görev, platform bilgisi.
+## Global oyun durumu: kalite ayarı, aktif görev, heybe, oynanış ayarları.
 ## Oyun mantığı burayı dinler; platforma özel şeyler PlatformServices'te durur.
 
 signal quality_changed(level: int)
 signal quest_changed(quest_key: String)
 signal locale_changed(locale: String)
+signal rhythm_changed(enabled: bool)
 
 enum Quality { LOW, MEDIUM, HIGH }
 const QUALITY_KEYS := ["QUALITY_LOW", "QUALITY_MEDIUM", "QUALITY_HIGH"]
@@ -13,6 +14,11 @@ const LOCALES := ["tr", "en"]
 var quality: int = Quality.HIGH
 var current_quest_key := "QUEST_EXPLORE"
 var is_mobile := false
+var inventory := Inventory.new()
+## Ritim vuruşu: açıkken küçülen halka hedefe değdiğinde basmak "tatlı vuruş" verir.
+## Kapalıyken basılı tutmak yeterli.
+var rhythm_hits := true
+var tutorial_step := 0
 
 
 func _ready() -> void:
@@ -21,6 +27,22 @@ func _ready() -> void:
 	# Mobil varsayılanı Düşük, PC varsayılanı Yüksek. Kayıtlı ayar varsa SaveSystem ezer.
 	quality = Quality.LOW if is_mobile else Quality.HIGH
 	WatercolorMaterials.apply_quality(quality)
+	add_to_group(&"persist")  # SaveSystem.PERSIST_GROUP (o henüz yüklenmedi)
+
+
+func set_rhythm_hits(enabled: bool) -> void:
+	rhythm_hits = enabled
+	rhythm_changed.emit(enabled)
+
+
+func save_state(data: Dictionary) -> void:
+	data["inventory"] = inventory.to_dict()
+	data["tutorial_step"] = tutorial_step
+
+
+func load_state(data: Dictionary) -> void:
+	inventory.from_dict(data.get("inventory", {}))
+	tutorial_step = int(data.get("tutorial_step", 0))
 
 
 func set_quality(level: int) -> void:

@@ -280,6 +280,12 @@ custom_minimum_size = Vector2(300, 64)
 layout_mode = 2
 text = "LANGUAGE"
 
+[node name="RhythmButton" type="Button" parent="PauseMenu/Panel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 64)
+layout_mode = 2
+text = "RHYTHM_HITS"
+
 [node name="TouchPreviewButton" type="Button" parent="PauseMenu/Panel/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 56)

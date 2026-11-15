@@ -1,6 +1,6 @@
 extends Node
-## user:// klasörüne JSON kayıt. Aşama 1'de ayarlar ve oyuncu konumu kaydedilir;
-## envanter, onarılan yapılar ve eşya geçmişi aynı dosyaya sonraki aşamalarda eklenir.
+## user:// klasörüne JSON kayıt: ayarlar, oyuncu konumu, heybe, dünyadaki kaynakların
+## durumu (kesilen ağaçlar, dikilen fidanlar). Onarımlar ve eşya geçmişi sonraki aşamalarda.
 ## Mobilde uygulama arka plana atıldığında otomatik kaydeder.
 
 signal saved
@@ -29,9 +29,12 @@ func _default_data() -> Dictionary:
 			"quality": GameState.quality,
 			"locale": "tr" if lang == "tr" else "en",
 			"volume": {"Music": 0.8, "SFX": 0.9, "Ambience": 0.9, "UI": 0.8},
+			"rhythm_hits": true,
 		},
 		"player": {},
 		"inventory": {},
+		"tutorial_step": 0,
+		"world": {},
 		"repaired": [],
 		"item_history": [],
 	}
@@ -56,6 +59,7 @@ func save_game() -> void:
 			node.save_state(data)
 	data["settings"]["quality"] = GameState.quality
 	data["settings"]["locale"] = GameState.current_locale()
+	data["settings"]["rhythm_hits"] = GameState.rhythm_hits
 	var tmp := SAVE_PATH + ".tmp"
 	var f := FileAccess.open(tmp, FileAccess.WRITE)
 	if f == null:
@@ -78,6 +82,7 @@ func apply_settings() -> void:
 	var s: Dictionary = data["settings"]
 	GameState.set_locale(str(s.get("locale", "tr")))
 	GameState.set_quality(int(s.get("quality", GameState.quality)))
+	GameState.set_rhythm_hits(bool(s.get("rhythm_hits", true)))
 	var vol: Dictionary = s.get("volume", {})
 	for bus in vol:
 		AudioManager.set_bus_volume(bus, float(vol[bus]))

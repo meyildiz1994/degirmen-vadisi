@@ -19,6 +19,7 @@ func _ready() -> void:
 	body.material_override = WatercolorMaterials.vertex_colored(true)
 	add_child(body)
 	var sb := StaticBody3D.new()
+	sb.set_meta("surface", "stone")
 	sb.add_child(_shape(body.mesh))
 	add_child(sb)
 	_build_wheel()

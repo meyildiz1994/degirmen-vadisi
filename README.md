@@ -6,7 +6,7 @@ Hedef: Steam (PC / Steam Deck), Android, iOS.
 Tüm görseller kodla üretilir (primitive + SurfaceTool/ArrayMesh, shader, FastNoiseLite).
 Tek harici varlık: OFL lisanslı **Patrick Hand** fontu (`fonts/`).
 
-## Durum: Aşama 1
+## Durum: Aşama 2 (toplama, heybe, ses aracı)
 
 | Sistem | Dosya |
 |---|---|
@@ -27,8 +27,41 @@ Tek harici varlık: OFL lisanslı **Patrick Hand** fontu (`fonts/`).
 | Ses bus'ları | `audio/default_bus_layout.tres` (Music, SFX, Ambience, UI) |
 | Çeviri (TR/EN) | `locale/strings.csv` |
 
-`/scripts` altındaki `materials.gd`, `crafting.gd`, `inventory.gd`, `repair.gd`, `item_memory.gd`,
-`save_system.gd` ve `/tools/generate_audio.py` ilgili aşamalarda eklenecek.
+### Aşama 2: toplama
+
+| Sistem | Dosya |
+|---|---|
+| Malzeme / kaynak / alet verisi | `data/materials.json`, `data/resources.json` |
+| Formüller (alet gücü, vuruş sayısı, sallanma süresi) | `scripts/materials.gd`, `scripts/tool_item.gd` |
+| Heybe (malzeme sınırsız, alet slotlu) | `scripts/inventory.gd` (GameState.inventory) |
+| Toplanabilir kaynak + durum makinesi | `scripts/gathering/gatherable.gd`, `tree_gatherable.gd`, `rock_gatherable.gd`, `pickup_gatherable.gd` |
+| Ağaçlar (kesme, devrilme, kütük, fidan) | `scripts/world/tree_field.gd` |
+| Ritim vuruşu, otomatik alet seçimi | `scripts/gathering/gather_controller.gd`, `scripts/ui/rhythm_ring.gd` |
+| Parçacık, ganimet uçuşu, odak parlaması, dikim | `gather_fx.gd`, `drop_flyer.gd`, `focus_highlight.gd`, `plant_spot.gd` |
+| Dünya tarafı + kayıt | `scripts/gathering/gather_world.gd` |
+| Metinsiz eğitim (ilk taş balta/kazma) | `scripts/tutorial.gd`, `scripts/ui/icon_hint_card.gd`, `item_icon.gd` |
+| Heybe paneli, toplama kartları | `scripts/ui/inventory_panel.gd`, `pickup_feed.gd` |
+
+**Vuruş formülü:** `vuruş = ceil(5 · (kaynak_sertliği / alet_gücü)²)`, alet kaynaktan yumuşaksa ×1.5 (en fazla 24).
+Alet gücü = baş malzemenin sertliği × ağız çarpanı (esneklik + işlenebilirlik). Taş balta meşede 5, demir balta 2 vuruş.
+Tatlı vuruş 2× ilerleme. Körelmiş alet yarı güçle çalışır, asla engellenmez.
+
+Test: `godot --headless --path . res://tests/test_gathering.tscn`
+
+`/scripts` altındaki `crafting.gd`, `repair.gd`, `item_memory.gd` ilgili aşamalarda eklenecek.
+
+## Sesler (ElevenLabs, yalnızca geliştirme sırasında)
+
+```
+echo "ELEVENLABS_API_KEY=..." > .env       # git'e ve build'e girmez
+python tools/generate_audio.py --dry-run   # neyin üretileceğini göster
+python tools/generate_audio.py             # sadece eksik dosyaları üret
+python tools/generate_audio.py --only axe_chop footstep_grass amb_stream
+python tools/generate_audio.py --force axe_chop   # tek sesi yeniden üret
+```
+
+Ses listesi, model adları ve hedef ses seviyeleri `tools/audio_manifest.json` içinde. Her üretimden sonra
+tarih, model ve prompt `generated` bölümüne yazılır (lisans kaydı). Efektler `.wav`, ambiyans/müzik `.ogg`.
 
 ### Kalite katmanları
 
@@ -46,7 +79,7 @@ Oyunda **F5** (veya gamepad LB) ya da duraklat menüsündeki "Grafik" butonu kal
 |---|---|---|---|
 | move | WASD / oklar | Sol çubuk | Sol yarıda sanal joystick |
 | look | Fare (oyun alanına tıkla) | Sağ çubuk | Sağ yarıda sürükle |
-| interact | E | A | Sağ alttaki "Etkileşim" |
+| interact (topla / kes / kır / dik) | E | A | Sağ alttaki "Etkileşim" |
 | inventory | Tab / I | Y | Üstteki "Heybe" |
 | pause | Esc | Start | Üstteki ‖ butonu |
 | quest_log (görev kartı) | J veya sağ üstteki ikon | D-pad yukarı | Sağ üstteki görev ikonu |

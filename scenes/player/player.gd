@@ -25,7 +25,9 @@ var yaw := 0.0
 var pitch := -0.28
 var focus: Interactable = null
 var input_enabled := true
+var gather: GatherController
 var _walk_phase := 0.0
+var _face_target := Vector3.INF
 
 
 func _ready() -> void:
@@ -36,6 +38,9 @@ func _ready() -> void:
 	yaw = rotation.y
 	rotation.y = 0.0
 	model.rotation.y = yaw
+	gather = GatherController.new()
+	gather.name = "Gather"
+	add_child(gather)
 
 
 func _physics_process(delta: float) -> void:
@@ -79,11 +84,20 @@ func _update_movement(delta: float) -> void:
 	if dir.length() > 0.05:
 		var face := atan2(-dir.x, -dir.z)
 		model.rotation.y = lerp_angle(model.rotation.y, face, clampf(turn_speed * delta, 0.0, 1.0))
+	elif _face_target != Vector3.INF:
+		var to := _face_target - global_position
+		model.rotation.y = lerp_angle(model.rotation.y, atan2(-to.x, -to.z), clampf(turn_speed * delta, 0.0, 1.0))
+	_face_target = Vector3.INF
 
 
 func _animate(delta: float) -> void:
 	var speed := Vector2(velocity.x, velocity.z).length()
+	var before := _walk_phase
 	_walk_phase += delta * speed * 2.6
+	if is_on_floor() and speed > 0.8 and floori(before / PI) != floori(_walk_phase / PI):
+		_footstep()
+	if gather.active():
+		model.set_windup(gather.ring_phase())
 	var bob := sin(_walk_phase * 2.0) * 0.045 * clampf(speed / walk_speed, 0.0, 1.0)
 	model.position.y = bob
 	model.rotation.z = sin(_walk_phase) * 0.04 * clampf(speed / walk_speed, 0.0, 1.0)
@@ -93,12 +107,20 @@ func _animate(delta: float) -> void:
 func _update_focus() -> void:
 	var best: Interactable = null
 	var best_d := INF
+	if gather.active():
+		# Oturum sürerken hedef sabit kalır.
+		if focus != gather.target:
+			focus = gather.target
+			focus_changed.emit(focus)
+		return
 	for node in get_tree().get_nodes_in_group(Interactable.GROUP):
 		var it := node as Interactable
+		if not it.can_focus():
+			continue
 		var d := it.global_position.distance_to(global_position)
-		if d < it.radius and d < best_d:
+		if d < it.radius and d + it.focus_bias < best_d:
 			best = it
-			best_d = d
+			best_d = d + it.focus_bias
 	if best != focus:
 		focus = best
 		focus_changed.emit(focus)
@@ -107,10 +129,57 @@ func _update_focus() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not input_enabled:
 		return
-	if event.is_action_pressed("interact") and focus != null:
+	if not event.is_action_pressed("interact"):
+		return
+	if gather.active():
+		gather.on_interact_pressed(gather.target)
+	elif focus is Gatherable:
+		gather.on_interact_pressed(focus as Gatherable)
+	elif focus != null:
 		focus.interact(self)
 		interacted_with.emit(focus)
-		get_viewport().set_input_as_handled()
+	else:
+		return
+	get_viewport().set_input_as_handled()
+
+
+# --- Toplama animasyonu kancaları (GatherController çağırır) --------------------------
+func set_held_tool(kind: String) -> void:
+	model.set_held_tool(kind)
+
+
+func play_swing() -> void:
+	model.strike()
+
+
+func play_pickup() -> void:
+	model.pickup()
+
+
+func face_towards(world_pos: Vector3) -> void:
+	_face_target = world_pos
+
+
+# --- Ayak sesleri: zemine göre çimen / taş / tahta ----------------------------------------
+func _footstep() -> void:
+	AudioManager.play_sfx_3d("footstep_" + surface_under(), global_position, -6.0)
+
+
+func surface_under() -> String:
+	var space := get_world_3d().direct_space_state
+	var q := PhysicsRayQueryParameters3D.create(global_position + Vector3(0, 0.4, 0), global_position + Vector3(0, -0.6, 0), 1)
+	q.exclude = [get_rid()]
+	var hit := space.intersect_ray(q)
+	if hit.is_empty():
+		return "grass"
+	var col: Object = hit["collider"]
+	if col.has_meta("surface"):
+		return str(col.get_meta("surface"))
+	# Arazi: dere kıyısındaki çakıllık ve dik yamaçlar taş, gerisi çimen.
+	var p := global_position
+	if ValleyShape.carve_weight(p.x, p.z) > 0.35 or (hit["normal"] as Vector3).y < 0.8:
+		return "stone"
+	return "grass"
 
 
 # --- Kayıt (SaveSystem 'persist' grubu) ------------------------------------------------
