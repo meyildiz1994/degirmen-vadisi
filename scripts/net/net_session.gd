@@ -27,12 +27,16 @@ const ENEMY_RATE := 0.1
 const SITE_RATE := 0.25
 const INV_RATE := 0.15
 const CONNECT_TIMEOUT := 10.0
+## Ücretsiz barındırmada uyuyan aracı sunucu ilk bağlantıda uyanana kadar bekle.
+const RELAY_TIMEOUT := 60.0
 const PLAYER_SCENE := preload("res://scenes/player/player.tscn")
 
 var status := Status.OFFLINE
 var role := Role.NONE
 var peer_id := 0
 var host_address := ""
+## Oda kodu (aracı üzerinden açılınca), arkadaş bunu yazar.
+var host_code := ""
 var world: Node3D
 var local_player: Player
 var remote: Player
@@ -88,9 +92,30 @@ func _set_status(s: int) -> void:
 
 
 # --- Bağlantı ------------------------------------------------------------------------
+## Oyun aç: oda kodu aracısı ayarlıysa oradan (port açmadan, her yerden), değilse ya da
+## aracıya ulaşılamazsa aynı ağ için doğrudan (ENet).
 func host() -> bool:
 	if active():
 		return false
+	host_code = ""
+	host_address = local_address()
+	var url := relay_url()
+	if url != "":
+		var rp := RelayPeer.new()
+		if rp.start_host(url) == OK:
+			rp.room_ready.connect(_on_room_ready)
+			rp.relay_error.connect(_on_relay_error)
+			multiplayer.multiplayer_peer = rp
+			role = Role.HOST
+			_connect_t = RELAY_TIMEOUT
+			_set_status(Status.CONNECTING)
+			if world != null:
+				attach(world)
+			return true
+	return _host_lan()
+
+
+func _host_lan() -> bool:
 	var peer := ENetMultiplayerPeer.new()
 	var err := peer.create_server(PORT, 1)
 	if err != OK:
@@ -98,13 +123,32 @@ func host() -> bool:
 		return false
 	multiplayer.multiplayer_peer = peer
 	role = Role.HOST
-	host_address = local_address()
+	host_code = ""
 	_set_status(Status.HOSTING)
 	if world != null:
 		attach(world)
 	return true
 
 
+func _on_room_ready(code: String) -> void:
+	host_code = code
+	_log("room %s" % code)
+	_set_status(Status.HOSTING)
+
+
+func _on_relay_error(reason: String) -> void:
+	_log("relay error %s" % reason)
+	if is_host() and status == Status.CONNECTING:
+		# Aracıya ulaşılamadı: aynı ağ için doğrudan açmayı dene.
+		_close()
+		failed.emit("relay")
+		_host_lan()
+	elif is_guest() and status in [Status.CONNECTING, Status.LOADING]:
+		_close()
+		failed.emit("no_room" if reason == "no_room" else ("full" if reason == "full" else "connect"))
+
+
+## Katıl: 6 harfli oda kodu ya da aynı ağdaki adres (ör. 192.168.1.24).
 func join(address: String) -> bool:
 	if active():
 		return false
@@ -112,16 +156,48 @@ func join(address: String) -> bool:
 	if address == "":
 		failed.emit("address")
 		return false
-	var peer := ENetMultiplayerPeer.new()
-	var err := peer.create_client(address, PORT)
-	if err != OK:
-		failed.emit("connect")
-		return false
-	multiplayer.multiplayer_peer = peer
+	if is_room_code(address):
+		var url := relay_url()
+		if url == "":
+			failed.emit("relay")
+			return false
+		var rp := RelayPeer.new()
+		if rp.start_join(url, address) != OK:
+			failed.emit("connect")
+			return false
+		rp.relay_error.connect(_on_relay_error)
+		multiplayer.multiplayer_peer = rp
+		_connect_t = RELAY_TIMEOUT
+	else:
+		var peer := ENetMultiplayerPeer.new()
+		var err := peer.create_client(address, PORT)
+		if err != OK:
+			failed.emit("connect")
+			return false
+		multiplayer.multiplayer_peer = peer
 	role = Role.GUEST
-	_connect_t = CONNECT_TIMEOUT
+	if not is_room_code(address):
+		_connect_t = CONNECT_TIMEOUT
 	_set_status(Status.CONNECTING)
 	return true
+
+
+static func is_room_code(text: String) -> bool:
+	var t := text.strip_edges().to_upper()
+	if t.length() != 6:
+		return false
+	for ch in t:
+		if ch < "A" or ch > "Z":
+			return false
+	return true
+
+
+## Aracının adresi: komut satırı (--relay=...) ya da proje ayarı degirmen/net/relay_url.
+static func relay_url() -> String:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--relay="):
+			return a.substr(8)
+	return str(ProjectSettings.get_setting("degirmen/net/relay_url", ""))
 
 
 func leave() -> void:
@@ -140,6 +216,7 @@ func _close() -> void:
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	role = Role.NONE
 	peer_id = 0
+	host_code = ""
 	_set_status(Status.OFFLINE)
 
 
@@ -170,8 +247,13 @@ func _process(delta: float) -> void:
 	if status == Status.CONNECTING:
 		_connect_t -= delta
 		if _connect_t <= 0.0:
-			_close()
-			failed.emit("connect")
+			if is_host():
+				_close()
+				failed.emit("relay")
+				_host_lan()
+			else:
+				_close()
+				failed.emit("connect")
 		return
 	if not has_partner() or local_player == null or not is_instance_valid(local_player):
 		return
@@ -202,7 +284,7 @@ func _on_peer_connected(id: int) -> void:
 	if not is_host():
 		return
 	if peer_id != 0:
-		(multiplayer.multiplayer_peer as ENetMultiplayerPeer).disconnect_peer(id)
+		multiplayer.multiplayer_peer.disconnect_peer(id)
 		return
 	peer_id = id
 	SaveSystem.save_game()

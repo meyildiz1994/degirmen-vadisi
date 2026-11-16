@@ -228,8 +228,8 @@ MSG_INTRO_FLOOD,"Sel geliyor! Dere boyunca akıp köprüyü ve çarkı döver. V
 NET_HOST,Oyun aç (arkadaşın sana katılsın),Host a game (your friend joins you)
 NET_JOIN,Katıl,Join
 NET_LEAVE,Çevrimiçi oyundan ayrıl,Leave online game
-NET_ADDRESS_HINT,Arkadaşının adresi,Friend's address
-NET_HELP,Arkadaşın oyun açsın ve adresini sana söylesin.,Ask your friend to host and tell you their address.
+NET_ADDRESS_HINT,Oda kodu ya da adres,Room code or address
+NET_HELP,Arkadaşın oyun açsın ve oda kodunu sana söylesin.,Ask your friend to host and tell you the room code.
 NET_WAITING,Arkadaşın bekleniyor. Adresin: %s,Waiting for your friend. Your address: %s
 NET_CONNECTING,Bağlanıyor…,Connecting…
 NET_ONLINE,Arkadaşınla bağlısın.,Connected with your friend.
@@ -241,3 +241,8 @@ MSG_NET_PORT,Oyun açılamadı: bağlantı noktası kullanımda.,Couldn't host: 
 MSG_NET_VERSION,Arkadaşının oyun sürümü farklı.,Your friend has a different game version.
 MSG_NET_ADDRESS,Önce arkadaşının adresini yaz.,Type your friend's address first.
 NET_TITLE,Çevrimiçi,Online
+NET_WAITING_CODE,Arkadaşın bekleniyor. Oda kodu: %s,Waiting for your friend. Room code: %s
+MSG_NET_RELAY,Oda sunucusuna ulaşılamadı. Aynı ağdaki arkadaşın adresle katılabilir.,Couldn't reach the room server. A friend on the same network can still join by address.
+MSG_NET_NO_ROOM,Bu kodla bir oda yok. Kodu kontrol et.,No room with that code. Check the code.
+MSG_NET_FULL,Bu oda dolu.,That room is full.
+NET_WAITING_CODE_SHORT,Arkadaşın bekleniyor. Ona bu oda kodunu söyle:,Waiting for your friend. Tell them this room code:

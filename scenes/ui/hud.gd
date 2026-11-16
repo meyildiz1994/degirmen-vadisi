@@ -51,6 +51,7 @@ var net_join_button: Button
 var net_address: LineEdit
 var net_join_row: HBoxContainer
 var net_status: Label
+var net_code: Label
 
 
 func _ready() -> void:
@@ -171,6 +172,12 @@ func _build_net_ui(vbox: VBoxContainer) -> void:
 	net_address.custom_minimum_size = Vector2(230, 0)
 	net_address.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	net_address.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_URL
+	net_address.text_changed.connect(func(t: String):
+		# Oda kodu büyük harfle görünsün
+		if Net.is_room_code(t) and t != t.to_upper():
+			var c := net_address.caret_column
+			net_address.text = t.to_upper()
+			net_address.caret_column = c)
 	net_address.add_theme_font_size_override("font_size", 22)
 	for st in ["normal", "focus"]:
 		var sb := StyleBoxFlat.new()
@@ -201,6 +208,14 @@ func _build_net_ui(vbox: VBoxContainer) -> void:
 	net_status.add_theme_font_size_override("font_size", 17)
 	net_status.add_theme_color_override("font_color", Palette.EARTH.darkened(0.2))
 	vbox.add_child(net_status)
+	# Oda kodu büyük harflerle: arkadaşa okunacak ya da yazılacak.
+	net_code = Label.new()
+	net_code.name = "NetCode"
+	net_code.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	net_code.add_theme_font_size_override("font_size", 46)
+	net_code.add_theme_color_override("font_color", Palette.SUNSET.darkened(0.25))
+	net_code.visible = false
+	vbox.add_child(net_code)
 	Net.status_changed.connect(func(_s): _refresh_net())
 	Net.partner_joined.connect(_refresh_net)
 	Net.partner_left.connect(_refresh_net)
@@ -230,7 +245,7 @@ func _on_net_join_pressed() -> void:
 
 
 func _on_net_failed(reason: String) -> void:
-	var key: String = {"port": "MSG_NET_PORT", "lost": "MSG_NET_LOST", "version": "MSG_NET_VERSION", "address": "MSG_NET_ADDRESS"}.get(reason, "MSG_NET_FAILED")
+	var key: String = {"port": "MSG_NET_PORT", "lost": "MSG_NET_LOST", "version": "MSG_NET_VERSION", "address": "MSG_NET_ADDRESS", "relay": "MSG_NET_RELAY", "no_room": "MSG_NET_NO_ROOM", "full": "MSG_NET_FULL"}.get(reason, "MSG_NET_FAILED")
 	show_toast(key, 5.0)
 	_refresh_net()
 	if net_status != null:
@@ -246,13 +261,23 @@ func _refresh_net() -> void:
 	net_join_row.visible = not Net.active()
 	match Net.status:
 		Net.Status.HOSTING:
-			net_status.text = tr("NET_ONLINE") if Net.has_partner() else tr("NET_WAITING") % Net.host_address
+			if Net.has_partner():
+				net_status.text = tr("NET_ONLINE")
+			elif Net.host_code != "":
+				net_status.text = tr("NET_WAITING_CODE_SHORT")
+			else:
+				net_status.text = tr("NET_WAITING") % Net.host_address
 		Net.Status.CONNECTING, Net.Status.LOADING:
 			net_status.text = tr("NET_CONNECTING")
 		Net.Status.ONLINE:
 			net_status.text = tr("NET_ONLINE")
 		_:
 			net_status.text = tr("NET_HELP")
+	net_code.visible = Net.status == Net.Status.HOSTING and Net.host_code != "" and not Net.has_partner()
+	var spaced := ""
+	for ch in Net.host_code:
+		spaced += ch + " "
+	net_code.text = spaced.strip_edges() if net_code.visible else ""
 	if coop_button != null:
 		coop_button.disabled = Net.active()
 	_fit_pause_panel.call_deferred()

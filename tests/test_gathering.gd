@@ -693,4 +693,5 @@ func _test_net(world: Node, player: Player) -> void:
 	check(ghost.downed and absf(ghost.global_position.x - float(moved[0])) < 0.2, "uzaktaki karakter yürüyüp sersemledi")
 	ghost.queue_free()
 	player.heal_full()
+	check(Net.is_room_code("kxrwta") and not Net.is_room_code("192.168.1.4") and not Net.is_room_code("ABC12"), "oda kodu adresten ayrılıyor")
 	check(Net.local_address() == "" or Net.local_address().contains("."), "yerel adres okunuyor (%s)" % Net.local_address())
