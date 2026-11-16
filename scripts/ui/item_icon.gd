@@ -100,8 +100,8 @@ func _draw() -> void:
 		"mill": _mill(c, k, ink, a)
 		"ink_blot": _ink_blot(c, k, a)
 		"rodent": _rodent(c, k, ink, a)
-		"spirit": _spirit(c, k, a)
-		"flood": _flood(c, k, a)
+		"spirit": _spirit(c, k, ink, a)
+		"flood": _flood(c, k, ink, a)
 		"two_players": _two_players(c, k, ink, a)
 		"mold_handle": _handle_icon(c, k, col, ink)
 		"mold_beam": _beam(c, k, col, ink)
@@ -239,43 +239,44 @@ func _ink_blot(c: Vector2, k: float, a: float) -> void:
 		draw_circle(c + Vector2(sx * 5.5, 1.0) * k, 2.0 * k, Color(0.05, 0.05, 0.06, a))
 
 
-## Kemirgen: yandan, büyük kulak ve kuyruk.
-func _rodent(c: Vector2, k: float, ink: Color, a: float) -> void:
+## Kemirgen: yandan sıska sıçan; dikenli sırt, sivri burun, kehribar göz, dişler.
+func _rodent(c: Vector2, k: float, _ink: Color, a: float) -> void:
 	var fur := Color(ValleyEnemy.FUR, a)
-	draw_line(c + Vector2(10, 6) * k, c + Vector2(20, -6) * k, Color(0.86, 0.6, 0.56, a), 2.5 * k)
-	_blob_ellipse(c + Vector2(2, 4) * k, Vector2(14, 10) * k, fur)
-	draw_circle(c + Vector2(-11, 0) * k, 8.0 * k, fur)
-	draw_circle(c + Vector2(-8, -9) * k, 5.5 * k, Color(0.92, 0.62, 0.60, a))
-	draw_circle(c + Vector2(-19, 2) * k, 2.2 * k, Color(0.85, 0.48, 0.48, a))
-	draw_circle(c + Vector2(-13, -1) * k, 1.8 * k, Color(0.06, 0.05, 0.05, a))
-	draw_rect(Rect2(c + Vector2(-19, 5) * k, Vector2(3, 3) * k), Color(Palette.PAPER, a))
-
-
-## Orman ruhu: yosun damlası, yaprak taç, ışıklı gözler.
-func _spirit(c: Vector2, k: float, a: float) -> void:
-	var moss := Color(ValleyEnemy.SPIRIT_MOSS, a)
-	_blob_ellipse(c + Vector2(0, 4) * k, Vector2(13, 15) * k, moss)
-	for i in 5:
-		var x := (i - 2) * 6.0
-		draw_colored_polygon(PackedVector2Array([c + Vector2(x - 3, -9) * k, c + Vector2(x, -20 + absf(i - 2) * 2) * k, c + Vector2(x + 3, -9) * k]), Color(Palette.MOSS_LIGHT if i % 2 == 0 else Palette.PINE, a))
-	for sx: float in [-1.0, 1.0]:
-		draw_circle(c + Vector2(sx * 5.0, 2) * k, 3.0 * k, Color(ValleyEnemy.SPIRIT_GLOW, a))
-
-
-## Sel suyu: köpüklü dalga.
-func _flood(c: Vector2, k: float, a: float) -> void:
-	var water := Color(ValleyEnemy.FLOOD_WATER, a)
-	var pts := PackedVector2Array([c + Vector2(-20, 14) * k])
-	for i in 9:
-		var t := i / 8.0
-		pts.append(c + Vector2(-20 + 40 * t, 2 - sin(t * PI) * 14) * k)
-	pts.append(c + Vector2(20, 14) * k)
-	draw_colored_polygon(pts, water)
+	draw_line(c + Vector2(12, 6) * k, c + Vector2(22, 12) * k, Color(0.72, 0.55, 0.52, a), 2.0 * k)
+	_blob_ellipse(c + Vector2(3, 3) * k, Vector2(12, 8) * k, fur)
+	draw_colored_polygon(PackedVector2Array([c + Vector2(-8, -2) * k, c + Vector2(-22, 3) * k, c + Vector2(-8, 6) * k]), fur)
 	for i in 4:
-		draw_circle(c + Vector2(-9 + i * 6, -10 + absf(i - 1.5) * 2) * k, 3.5 * k, Color(ValleyEnemy.FLOOD_FOAM, a))
+		var x := -4.0 + i * 5.0
+		draw_colored_polygon(PackedVector2Array([c + Vector2(x - 3, -3) * k, c + Vector2(x, -13 + absf(i - 1.5) * 2) * k, c + Vector2(x + 3, -3) * k]), Color(0.14, 0.12, 0.11, a))
+	draw_circle(c + Vector2(-12, 0) * k, 2.2 * k, Color(1.0, 0.55, 0.1, a))
+	draw_rect(Rect2(c + Vector2(-20, 5) * k, Vector2(2, 4) * k), Color(0.93, 0.84, 0.55, a))
+
+
+## Orman ruhu: boynuz dallı uzun kabuk yüz, çukur gözlerde ışık.
+func _spirit(c: Vector2, k: float, _ink: Color, a: float) -> void:
+	var bark := Color(0.34, 0.30, 0.27, a)
 	for sx: float in [-1.0, 1.0]:
-		draw_circle(c + Vector2(sx * 5.0, 3) * k, 2.8 * k, Color(Palette.PAPER, a))
-		draw_circle(c + Vector2(sx * 5.0, 3.5) * k, 1.3 * k, Color(0.05, 0.1, 0.18, a))
+		draw_line(c + Vector2(sx * 4, -8) * k, c + Vector2(sx * 12, -22) * k, bark, 2.5 * k)
+		draw_line(c + Vector2(sx * 9, -17) * k, c + Vector2(sx * 17, -18) * k, bark, 2.0 * k)
+	_blob_ellipse(c + Vector2(0, 14) * k, Vector2(12, 8) * k, Color(0.27, 0.45, 0.30, a))
+	_blob_ellipse(c + Vector2(0, 0) * k, Vector2(8, 13) * k, bark)
+	for sx: float in [-1.0, 1.0]:
+		draw_circle(c + Vector2(sx * 3.5, -2) * k, 3.0 * k, Color(0.03, 0.03, 0.02, a))
+		draw_circle(c + Vector2(sx * 3.5, -2) * k, 1.1 * k, Color(0.85, 1.0, 0.7, a))
+	draw_rect(Rect2(c + Vector2(-3, 7) * k, Vector2(6, 2) * k), Color(0.06, 0.05, 0.04, a))
+
+
+## Sel suyu: çamurlu dalga ağzı, köpük dişleri.
+func _flood(c: Vector2, k: float, _ink: Color, a: float) -> void:
+	var water := Color(ValleyEnemy.FLOOD_WATER.darkened(0.2), a)
+	_blob_ellipse(c + Vector2(0, 2) * k, Vector2(20, 14) * k, water)
+	_blob_ellipse(c + Vector2(0, 5) * k, Vector2(13, 6) * k, Color(0.06, 0.1, 0.12, a))
+	for i in 6:
+		var x := -11.0 + i * 4.4
+		draw_colored_polygon(PackedVector2Array([c + Vector2(x - 2, -1) * k, c + Vector2(x, 6) * k, c + Vector2(x + 2, -1) * k]), Color(ValleyEnemy.FLOOD_FOAM, a))
+	for i in 5:
+		var x := -12.0 + i * 6.0
+		draw_colored_polygon(PackedVector2Array([c + Vector2(x - 3, -9) * k, c + Vector2(x + 1, -19) * k, c + Vector2(x + 3, -9) * k]), Color(ValleyEnemy.FLOOD_FOAM, a))
 
 
 func _blob_ellipse(c: Vector2, r: Vector2, col: Color) -> void:

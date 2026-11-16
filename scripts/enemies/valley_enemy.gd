@@ -21,7 +21,7 @@ enum State { SEEK, GNAW, CHASE, FLEE, DYING }
 ## Mavi-siyah mürekkep (morumsu değil; gölgeler gibi nötr kalsın).
 const INK := Color(0.10, 0.14, 0.18)
 const INK_SHEEN := Color(0.22, 0.34, 0.40)
-const FUR := Color(0.55, 0.44, 0.36)
+const FUR := Color(0.30, 0.27, 0.25)
 const SPIRIT_MOSS := Color(0.45, 0.78, 0.48)
 const SPIRIT_GLOW := Color(1.0, 0.88, 0.45)
 const FLOOD_WATER := Color(0.30, 0.58, 0.82)
@@ -31,7 +31,7 @@ const WOOD_MATS := ["oak", "pine", "reed", "branch"]
 const STATS := {
 	Kind.SMALL: [4.0, 1.75, 2.2, 0.36, 0],
 	Kind.BIG: [12.0, 1.05, 4.5, 0.66, 1],
-	Kind.RODENT: [2.0, 2.7, 3.2, 0.26, 0],
+	Kind.RODENT: [2.0, 2.7, 3.2, 0.3, 0],
 	Kind.SPIRIT: [7.0, 1.2, 1.1, 0.42, 0],
 	Kind.FLOOD: [14.0, 2.0, 7.0, 0.95, 1],
 }
@@ -189,59 +189,114 @@ func _build_blot(kit: MeshKit, ek: MeshKit) -> void:
 			ek.box(Vector3(sx * r * 0.32, ey + r * 0.24, -r * 0.82), Vector3(r * 0.34, r * 0.07, r * 0.06), Palette.SUNSET.darkened(0.1), Vector3(0, 0, sx * 0.4))
 
 
-## Kemirgen: tombul gövde, büyük kulaklar, öne çıkık dişler, uzun kuyruk. Yüz -Z.
+## Kemirgen: sıska, kambur bir sıçan. Uzun sivri burun, öne çıkık sarı dişler, sırtında
+## diken diken kabarmış tüyler, küçük yırtık kulaklar, kızgın kehribar gözler, çıplak kuyruk.
 func _build_rodent(kit: MeshKit, ek: MeshKit) -> void:
 	var r := size
-	kit.sphere(Vector3(0, r * 0.75, r * 0.15), r, FUR, Vector3(0.9, 0.8, 1.25), 12)
-	kit.sphere(Vector3(0, r * 0.62, r * 0.35), r * 0.75, FUR.lightened(0.25), Vector3(0.8, 0.6, 1.0), 10)  # açık karın
-	kit.sphere(Vector3(0, r * 0.95, -r * 0.85), r * 0.6, FUR, Vector3(1.0, 0.9, 1.1), 10)  # kafa
-	kit.sphere(Vector3(0, r * 0.85, -r * 1.4), r * 0.16, Color(0.85, 0.48, 0.48), Vector3.ONE, 8)  # burun
+	var fur_dark := FUR.darkened(0.25)
+	# Kambur gövde: arkası yüksek, öne doğru alçalır.
+	kit.sphere(Vector3(0, r * 0.95, r * 0.35), r * 0.85, FUR, Vector3(0.62, 0.8, 1.35), 12)
+	kit.sphere(Vector3(0, r * 0.72, -r * 0.45), r * 0.62, FUR, Vector3(0.65, 0.7, 1.2), 10)
+	# Uzun sivri kafa ve burun
+	kit.sphere(Vector3(0, r * 0.72, -r * 1.1), r * 0.42, FUR, Vector3(0.85, 0.8, 1.3), 10)
+	kit.cylinder(Vector3(0, r * 0.6, -r * 1.75), r * 0.04, r * 0.24, r * 0.95, FUR, Vector3(-PI * 0.5 + 0.15, 0, 0), 8)
+	kit.sphere(Vector3(0, r * 0.52, -r * 2.22), r * 0.07, Color(0.12, 0.08, 0.08), Vector3.ONE, 6)  # burun ucu
+	# Öne çıkık, sararmış kesici dişler
 	for sx: float in [-1.0, 1.0]:
-		kit.sphere(Vector3(sx * r * 0.42, r * 1.45, -r * 0.75), r * 0.32, FUR.darkened(0.08), Vector3(1.0, 1.0, 0.35), 10)
-		kit.sphere(Vector3(sx * r * 0.42, r * 1.45, -r * 0.82), r * 0.2, Color(0.92, 0.62, 0.60), Vector3(1.0, 1.0, 0.3), 8)
-		kit.box(Vector3(sx * r * 0.45, r * 0.12, -r * 0.3), Vector3(r * 0.22, r * 0.2, r * 0.35), FUR.darkened(0.2))  # ayak
-	kit.box(Vector3(0, r * 0.62, -r * 1.33), Vector3(r * 0.22, r * 0.2, r * 0.06), Palette.PAPER)  # dişler
+		kit.box(Vector3(sx * r * 0.05, r * 0.36, -r * 2.0), Vector3(r * 0.08, r * 0.26, r * 0.05), Color(0.93, 0.84, 0.55), Vector3(0.25, 0, 0))
+	# Küçük, yırtık kulaklar (sivri)
 	for sx: float in [-1.0, 1.0]:
-		ek.sphere(Vector3(sx * r * 0.27, r * 1.1, -r * 1.3), r * 0.11, Color(0.06, 0.05, 0.05), Vector3.ONE, 8)
+		kit.prism(Vector3(sx * r * 0.3, r * 1.12, -r * 0.95), Vector3(r * 0.22, r * 0.3, r * 0.08), fur_dark, Vector3(0, 0, sx * 0.35))
+	# Sırtta kabarmış tüy dikenleri
+	for i in 6:
+		var z := -r * 0.7 + i * r * 0.32
+		var h := r * (0.35 + 0.15 * sin(i * 1.7))
+		kit.prism(Vector3(0, r * 1.6 - absf(z - r * 0.3) * 0.35, z), Vector3(r * 0.2, h * 1.6, r * 0.26), Color(0.14, 0.12, 0.11), Vector3(-0.45, 0, 0))
+	# İnce, pençeli bacaklar
+	for sx: float in [-1.0, 1.0]:
+		for fz: float in [-0.75, 0.55]:
+			kit.cylinder(Vector3(sx * r * 0.32, r * 0.25, fz * r), r * 0.06, r * 0.08, r * 0.5, fur_dark, Vector3(0.2, 0, 0), 6)
+			kit.box(Vector3(sx * r * 0.32, r * 0.03, fz * r - r * 0.08), Vector3(r * 0.16, r * 0.05, r * 0.2), Color(0.25, 0.2, 0.18))
+	# Kızgın kehribar gözler, çatık kaş
+	for sx: float in [-1.0, 1.0]:
+		ek.sphere(Vector3(sx * r * 0.2, r * 0.86, -r * 1.35), r * 0.11, Color(1.0, 0.55, 0.1), Vector3(1.0, 0.7, 1.0), 8)
+		ek.box(Vector3(sx * r * 0.2, r * 0.98, -r * 1.36), Vector3(r * 0.2, r * 0.05, r * 0.05), Color(0.15, 0.1, 0.08), Vector3(0, 0, sx * 0.5))
 	_tail = Node3D.new()
-	_tail.position = Vector3(0, r * 0.5, r * 1.3)
+	_tail.position = Vector3(0, r * 0.55, r * 1.3)
 	_pivot.add_child(_tail)
 	var tk := MeshKit.new()
-	tk.cylinder(Vector3(0, 0, r * 0.7), r * 0.04, r * 0.1, r * 1.5, Color(0.86, 0.6, 0.56), Vector3(PI * 0.5 - 0.3, 0, 0), 6)
+	tk.cylinder(Vector3(0, -r * 0.1, r * 0.9), r * 0.02, r * 0.09, r * 1.9, Color(0.72, 0.55, 0.52), Vector3(PI * 0.5 - 0.15, 0, 0), 6)
 	var tail := MeshInstance3D.new()
 	tail.mesh = tk.commit()
 	tail.material_override = WatercolorMaterials.vertex_colored(false)
 	_tail.add_child(tail)
 
 
-## Orman ruhu: yosundan damla gövde, yaprak taç, sıcak ışıklı gözler, havada süzülür.
+## Orman ruhu: yaşlı, sıska bir orman bekçisi. Kabuktan uzun bir yüz, çatallı boynuz
+## gibi dallar, çukur göz yuvalarında iki küçük ışık, yere değmeyen yırtık yosun pelerin,
+## uzun ince kollar ve dal pençeler. Hafif öne eğik durur.
 func _build_spirit(kit: MeshKit, ek: MeshKit) -> void:
 	var r := size
-	kit.sphere(Vector3(0, r * 0.9, 0), r, SPIRIT_MOSS, Vector3(1.0, 1.15, 1.0), 14)
-	kit.cylinder(Vector3(0, r * 0.05, 0), r * 0.55, 0.0, r * 0.7, SPIRIT_MOSS.darkened(0.12), Vector3.ZERO, 10)  # kuyruk ucu
+	var bark := Color(0.34, 0.30, 0.27)        # yıpranmış, solmuş kabuk
+	var moss := Color(0.27, 0.45, 0.30)        # eski, nemli yosun
+	# Yırtık pelerin: aşağı doğru genişleyen, ucu sivri saçaklı koni
+	kit.cylinder(Vector3(0, r * 0.55, 0), r * 0.35, r * 0.75, r * 1.5, moss, Vector3.ZERO, 9)
+	for i in 7:
+		var a := TAU * i / 7.0 + 0.2
+		kit.prism(Vector3(cos(a) * r * 0.62, -r * 0.35, sin(a) * r * 0.62), Vector3(r * 0.28, r * 0.6, r * 0.1), moss.darkened(0.1), Vector3(PI, -a, 0))
+	# Gövde ve uzun kabuk yüz (maske gibi)
+	kit.sphere(Vector3(0, r * 1.55, 0), r * 0.48, moss, Vector3(1.1, 0.9, 0.9), 10)
+	kit.sphere(Vector3(0, r * 2.1, -r * 0.2), r * 0.36, bark, Vector3(0.8, 1.55, 0.8), 10)   # öne eğik uzun yüz
+	kit.box(Vector3(0, r * 1.72, -r * 0.45), Vector3(r * 0.26, r * 0.14, r * 0.05), Color(0.06, 0.05, 0.04))  # yarık ağız
+	# Omuzlardan sarkan yosun saçakları
 	for i in 6:
-		var a := TAU * i / 6.0
-		var leaf := Palette.MOSS_LIGHT if i % 2 == 0 else Palette.PINE.lightened(0.15)
-		kit.prism(Vector3(cos(a) * r * 0.5, r * 2.05, sin(a) * r * 0.5), Vector3(r * 0.5, r * 0.95, r * 0.14), leaf, Vector3(cos(a) * 0.5, -a, sin(a) * 0.5))
+		var x := (i - 2.5) * r * 0.2
+		kit.cylinder(Vector3(x, r * 1.25, -r * 0.35), r * 0.01, r * 0.05, r * 0.7, moss.darkened(0.2), Vector3(0.1, 0, 0), 5)
+	# Çatallı boynuz-dallar
 	for sx: float in [-1.0, 1.0]:
-		kit.sphere(Vector3(sx * r * 0.95, r * 0.85, 0), r * 0.28, SPIRIT_MOSS.lightened(0.15), Vector3(0.6, 1.4, 0.6), 8)  # kollar
-	kit.sphere(Vector3(r * 0.3, r * 1.45, r * 0.4), r * 0.14, Palette.SUNSET_LIGHT, Vector3.ONE, 6)  # küçük çiçek
+		kit.cylinder(Vector3(sx * r * 0.32, r * 2.75, 0), r * 0.03, r * 0.07, r * 0.8, bark, Vector3(0, 0, -sx * 0.55), 6)
+		kit.cylinder(Vector3(sx * r * 0.62, r * 3.05, 0), r * 0.02, r * 0.05, r * 0.5, bark, Vector3(0, 0, -sx * 1.1), 6)
+		kit.cylinder(Vector3(sx * r * 0.45, r * 3.15, 0), r * 0.02, r * 0.04, r * 0.45, bark, Vector3(0.2, 0, -sx * 0.15), 6)
+		kit.prism(Vector3(sx * r * 0.78, r * 3.2, 0), Vector3(r * 0.2, r * 0.26, r * 0.06), Palette.PINE, Vector3(0, 0, -sx * 0.9))
+	# Uzun ince kollar ve dal pençeler (öne uzanmış)
 	for sx: float in [-1.0, 1.0]:
-		ek.sphere(Vector3(sx * r * 0.33, r * 1.05, -r * 0.88), r * 0.17, SPIRIT_GLOW, Vector3(1.0, 1.3, 0.5), 10)
+		kit.cylinder(Vector3(sx * r * 0.62, r * 1.2, -r * 0.3), r * 0.05, r * 0.08, r * 1.2, bark, Vector3(0.9, 0, sx * 0.35), 6)
+		for f in 3:
+			var fx := sx * r * (0.8 + f * 0.07)
+			kit.cylinder(Vector3(fx, r * 0.72, -r * 0.9), r * 0.005, r * 0.035, r * 0.55, bark, Vector3(1.3 + f * 0.15, 0, sx * (f - 1) * 0.45), 5)
+	# Çukur göz yuvaları ve içlerinde küçük, soğuk ışıklar
+	for sx: float in [-1.0, 1.0]:
+		ek.sphere(Vector3(sx * r * 0.15, r * 2.25, -r * 0.44), r * 0.14, Color(0.03, 0.03, 0.02), Vector3(1.0, 1.4, 0.5), 8)
+		ek.sphere(Vector3(sx * r * 0.15, r * 2.22, -r * 0.52), r * 0.055, Color(0.85, 1.0, 0.7), Vector3.ONE, 6)
 
 
-## Sel suyu: dereyi kaplayan köpüklü dalga; önde kızgın gözler, tepede köpük.
+## Sel suyu: çamurlu, öne doğru kıvrılan bir dalga duvarı. Gözü yok; tepesi sivri köpük
+## dişleriyle bir ağız gibi açılır, içinde koparıp sürüklediği kütükler ve taşlar döner.
 func _build_flood(kit: MeshKit, ek: MeshKit) -> void:
 	var r := size
-	kit.sphere(Vector3(0, r * 0.4, 0), r * 1.3, FLOOD_WATER, Vector3(1.6, 0.6, 1.0), 14)
-	kit.sphere(Vector3(0, r * 0.7, -r * 0.3), r, FLOOD_WATER.lightened(0.12), Vector3(1.5, 0.8, 0.9), 12)
+	var deep := FLOOD_WATER.darkened(0.35).lerp(Palette.EARTH, 0.25)
+	var mid := FLOOD_WATER.darkened(0.1).lerp(Palette.EARTH, 0.15)
+	# Gövde: arkada yüksek, öne doğru kıvrılan dalga sırtı
+	kit.sphere(Vector3(0, r * 0.35, r * 0.4), r * 1.3, deep, Vector3(1.6, 0.5, 1.1), 14)
+	kit.sphere(Vector3(0, r * 0.95, r * 0.1), r, mid, Vector3(1.55, 0.9, 0.8), 12)
+	kit.sphere(Vector3(0, r * 1.55, -r * 0.35), r * 0.62, mid.lightened(0.08), Vector3(2.3, 0.55, 0.9), 12)  # kıvrılan tepe
+	# Dalganın altındaki karanlık oyuk (ağız)
+	kit.sphere(Vector3(0, r * 0.85, -r * 0.62), r * 0.55, Color(0.06, 0.1, 0.12), Vector3(2.0, 0.7, 0.4), 10)
+	# Tepeden aşağı sarkan sivri köpük dişleri
+	for i in 9:
+		var x := (i - 4) * r * 0.34
+		var h := r * (0.42 + 0.18 * absf(sin(i * 1.3)))
+		kit.prism(Vector3(x, r * 1.2, -r * 0.82), Vector3(r * 0.2, h, r * 0.14), FLOOD_FOAM, Vector3(PI, 0, 0))
+	# Üstte savrulan köpük sivrileri
 	for i in 7:
 		var x := (i - 3) * r * 0.45
-		kit.sphere(Vector3(x, r * 1.25 - absf(i - 3) * r * 0.08, -r * 0.55), r * 0.32, FLOOD_FOAM, Vector3(1.0, 0.6, 1.0), 8)
-	for sx: float in [-1.0, 1.0]:
-		ek.sphere(Vector3(sx * r * 0.4, r * 0.85, -r * 1.0), r * 0.16, Palette.PAPER, Vector3.ONE, 10)
-		ek.sphere(Vector3(sx * r * 0.38, r * 0.83, -r * 1.12), r * 0.08, Color(0.05, 0.1, 0.18), Vector3.ONE, 8)
-		ek.box(Vector3(sx * r * 0.4, r * 1.06, -r * 1.02), Vector3(r * 0.3, r * 0.06, r * 0.05), Color(0.12, 0.3, 0.5), Vector3(0, 0, sx * 0.35))
+		kit.prism(Vector3(x, r * 2.0, -r * 0.4 + absf(i - 3) * r * 0.08), Vector3(r * 0.22, r * 0.45, r * 0.16), FLOOD_FOAM, Vector3(-0.6, 0, (i - 3) * 0.15))
+	# Sürüklenen kütükler ve taşlar
+	kit.cylinder(Vector3(-r * 0.9, r * 1.25, -r * 0.1), r * 0.12, r * 0.14, r * 1.4, Palette.WOOD_DARK, Vector3(0.3, 0, 1.1), 7)
+	kit.cylinder(Vector3(r * 0.95, r * 0.7, -r * 0.45), r * 0.1, r * 0.12, r * 1.1, Palette.WOOD, Vector3(-0.5, 0.4, -0.9), 7)
+	kit.sphere(Vector3(r * 0.4, r * 1.65, -r * 0.2), r * 0.18, Palette.STONE_DARK, Vector3(1.2, 0.9, 1.0), 6)
+	kit.sphere(Vector3(-r * 0.3, r * 0.45, -r * 0.7), r * 0.2, Palette.STONE_DARK, Vector3(1.0, 0.8, 1.2), 6)
+	kit.box(Vector3(r * 1.25, r * 1.4, 0), Vector3(r * 0.5, r * 0.08, r * 0.12), Palette.WOOD_OLD, Vector3(0, 0.5, 0.7))  # kırık tahta
 
 
 # --- Davranış ----------------------------------------------------------------------------
