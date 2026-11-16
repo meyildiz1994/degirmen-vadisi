@@ -174,3 +174,51 @@ static func crack_weak(st: Dictionary) -> Array:
 	if not out.is_empty():
 		st["crossings"] = 0
 	return out
+
+
+# --- Mürekkep lekelerinin aşındırması --------------------------------------------------
+## Takılı parçanın dayanıklılığı: istenen özelliklerin ortalamasından. Zayıf parça yarısı.
+static func slot_max_hp(site_id: String, st: Dictionary, slot_id: String) -> float:
+	var s := slot_state(st, slot_id)
+	if not s.has("part"):
+		return 0.0
+	var n := needs(site_id, slot_id)
+	var stats := Crafting.stats_for_part(str(s["part"]))
+	var total := 0.0
+	for k: String in n:
+		total += Crafting.stat_value(stats, k)
+	var avg := total / float(maxi(n.size(), 1))
+	var hp := 20.0 + 6.0 * avg
+	return hp * (0.5 if bool(s.get("weak", false)) else 1.0)
+
+
+## Kalan dayanıklılık oranı (0..1). Boş/çatlak yuva 0.
+static func slot_health(site_id: String, st: Dictionary, slot_id: String) -> float:
+	var m := slot_max_hp(site_id, st, slot_id)
+	if m <= 0.0:
+		return 0.0
+	return clampf(1.0 - float(slot_state(st, slot_id).get("wear", 0.0)) / m, 0.0, 1.0)
+
+
+## Yuvayı aşındır. Dayanıklılığı biten parça çatlar (yeniden yapılması gerekir).
+## Döner: true = parça bu darbeyle çatladı.
+static func erode(st: Dictionary, site_id: String, slot_id: String, amount: float) -> bool:
+	var s := slot_state(st, slot_id)
+	if not s.has("part"):
+		return false
+	s["wear"] = float(s.get("wear", 0.0)) + amount
+	if float(s["wear"]) >= slot_max_hp(site_id, st, slot_id):
+		st["slots"][slot_id] = {"cracked": s["part"]}
+		return true
+	return false
+
+
+## Dalga bitince takılı parçalar yavaşça toparlanır.
+static func mend(st: Dictionary, amount: float) -> bool:
+	var any := false
+	for slot_id: String in st["slots"]:
+		var s := slot_state(st, slot_id)
+		if s.has("part") and float(s.get("wear", 0.0)) > 0.0:
+			s["wear"] = maxf(float(s["wear"]) - amount, 0.0)
+			any = true
+	return any

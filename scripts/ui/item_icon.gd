@@ -72,6 +72,10 @@ func _draw() -> void:
 		"check":
 			draw_polyline(PackedVector2Array([c + Vector2(-12, 0) * k, c + Vector2(-3, 9) * k, c + Vector2(13, -10) * k]), Color(Palette.MOSS_DARK, a), 5.0 * k, true)
 			return
+		"pad_a":
+			# 2. oyuncunun gamepad'i: A tuşu (cihazdan bağımsız).
+			_pad_body(c, k, ink, a)
+			return
 		"crack":
 			var zig := PackedVector2Array([c + Vector2(-4, -16) * k, c + Vector2(3, -6) * k, c + Vector2(-5, 2) * k, c + Vector2(4, 9) * k, c + Vector2(-1, 16) * k])
 			draw_polyline(zig, Color(Palette.SUNSET.darkened(0.2), a), 5.0 * k, true)
@@ -94,6 +98,11 @@ func _draw() -> void:
 		"hand": _hand(c, k, ink, a)
 		"bridge": _bridge(c, k, ink, a)
 		"mill": _mill(c, k, ink, a)
+		"ink_blot": _ink_blot(c, k, a)
+		"rodent": _rodent(c, k, ink, a)
+		"spirit": _spirit(c, k, ink, a)
+		"flood": _flood(c, k, ink, a)
+		"two_players": _two_players(c, k, ink, a)
 		"mold_handle": _handle_icon(c, k, col, ink)
 		"mold_beam": _beam(c, k, col, ink)
 		"mold_connector": _connector(c, k, col, ink)
@@ -215,6 +224,99 @@ func _hand(c: Vector2, k: float, ink: Color, a: float) -> void:
 		draw_rect(Rect2(c + Vector2(-10 + i * 5, -14 + absf(i - 1.5) * 2.0) * k, Vector2(4.5, 14) * k), skin)
 	draw_rect(Rect2(c + Vector2(10, 0) * k, Vector2(6, 5) * k).abs(), skin)
 	draw_rect(Rect2(c + Vector2(-10, -2) * k, Vector2(20, 16) * k), ink, false, 1.5 * k)
+
+
+## Mürekkep lekesi: iri gözlü mavi-siyah damla.
+func _ink_blot(c: Vector2, k: float, a: float) -> void:
+	var inkc := Color(ValleyEnemy.INK, a)
+	draw_circle(c + Vector2(0, 4) * k, 15.0 * k, inkc)
+	for i in 5:
+		var ang := PI * 0.15 + PI * 0.7 * i / 4.0
+		draw_circle(c + Vector2(cos(ang) * 14.0, 10.0 + sin(ang) * 6.0) * k, 4.5 * k, inkc)
+	draw_circle(c + Vector2(-8, -6) * k, 4.0 * k, Color(ValleyEnemy.INK_SHEEN, a))
+	for sx: float in [-1.0, 1.0]:
+		draw_circle(c + Vector2(sx * 6.0, 0) * k, 4.5 * k, Color(Palette.PAPER, a))
+		draw_circle(c + Vector2(sx * 5.5, 1.0) * k, 2.0 * k, Color(0.05, 0.05, 0.06, a))
+
+
+## Kemirgen: yandan sıska sıçan; dikenli sırt, sivri burun, kehribar göz, dişler.
+func _rodent(c: Vector2, k: float, _ink: Color, a: float) -> void:
+	var fur := Color(ValleyEnemy.FUR, a)
+	draw_line(c + Vector2(12, 6) * k, c + Vector2(22, 12) * k, Color(0.72, 0.55, 0.52, a), 2.0 * k)
+	_blob_ellipse(c + Vector2(3, 3) * k, Vector2(12, 8) * k, fur)
+	draw_colored_polygon(PackedVector2Array([c + Vector2(-8, -2) * k, c + Vector2(-22, 3) * k, c + Vector2(-8, 6) * k]), fur)
+	for i in 4:
+		var x := -4.0 + i * 5.0
+		draw_colored_polygon(PackedVector2Array([c + Vector2(x - 3, -3) * k, c + Vector2(x, -13 + absf(i - 1.5) * 2) * k, c + Vector2(x + 3, -3) * k]), Color(0.14, 0.12, 0.11, a))
+	draw_circle(c + Vector2(-12, 0) * k, 4.2 * k, Color(0.62, 0.16, 0.14, a))
+	draw_circle(c + Vector2(-12, 0) * k, 3.5 * k, Color(0.97, 0.93, 0.88, a))
+	for v in 4:
+		var ang := TAU * v / 4.0 + 0.4
+		draw_line(c + Vector2(-12, 0) * k + Vector2(cos(ang), sin(ang)) * 1.2 * k, c + Vector2(-12, 0) * k + Vector2(cos(ang), sin(ang)) * 3.3 * k, Color(0.85, 0.08, 0.08, a), 0.8 * k)
+	draw_circle(c + Vector2(-12.5, 0) * k, 1.3 * k, Color(0.55, 0.08, 0.05, a))
+	draw_rect(Rect2(c + Vector2(-20, 5) * k, Vector2(2, 4) * k), Color(0.93, 0.84, 0.55, a))
+
+
+## Orman ruhu: boynuz dallı uzun kabuk yüz, çukur gözlerde ışık.
+func _spirit(c: Vector2, k: float, _ink: Color, a: float) -> void:
+	var bark := Color(0.34, 0.30, 0.27, a)
+	for sx: float in [-1.0, 1.0]:
+		draw_line(c + Vector2(sx * 4, -8) * k, c + Vector2(sx * 12, -22) * k, bark, 2.5 * k)
+		draw_line(c + Vector2(sx * 9, -17) * k, c + Vector2(sx * 17, -18) * k, bark, 2.0 * k)
+	_blob_ellipse(c + Vector2(0, 14) * k, Vector2(12, 8) * k, Color(0.27, 0.45, 0.30, a))
+	_blob_ellipse(c + Vector2(0, 0) * k, Vector2(8, 13) * k, bark)
+	for sx: float in [-1.0, 1.0]:
+		draw_circle(c + Vector2(sx * 3.5, -2) * k, 3.0 * k, Color(0.03, 0.03, 0.02, a))
+		draw_circle(c + Vector2(sx * 3.5, -2) * k, 1.1 * k, Color(0.85, 1.0, 0.7, a))
+	draw_rect(Rect2(c + Vector2(-3, 7) * k, Vector2(6, 2) * k), Color(0.06, 0.05, 0.04, a))
+
+
+## Sel suyu: çamurlu, köpüklü taşkın dalgası ve sürüklenen kütük.
+func _flood(c: Vector2, k: float, _ink: Color, a: float) -> void:
+	var mud := Color(0.42, 0.32, 0.22, a)
+	_blob_ellipse(c + Vector2(0, 8) * k, Vector2(21, 9) * k, Color(0.30, 0.23, 0.17, a))
+	_blob_ellipse(c + Vector2(-6, 2) * k, Vector2(11, 8) * k, mud)
+	_blob_ellipse(c + Vector2(7, 3) * k, Vector2(11, 7) * k, Color(0.55, 0.45, 0.33, a))
+	for i in 7:
+		var x := -15.0 + i * 5.0
+		draw_circle(c + Vector2(x, -4 + sin(i * 2.1) * 2.5) * k, (2.6 + absf(sin(i * 1.3))) * k, Color(ValleyEnemy.FLOOD_FOAM, a))
+	for i in 4:
+		draw_circle(c + Vector2(-10 + i * 7, -13 - (i % 2) * 3) * k, 1.1 * k, Color(ValleyEnemy.FLOOD_FOAM, a))
+	draw_line(c + Vector2(-14, 9) * k, c + Vector2(4, 4) * k, Color(Palette.WOOD_DARK, a), 3.0 * k)
+
+
+func _blob_ellipse(c: Vector2, r: Vector2, col: Color) -> void:
+	var pts := PackedVector2Array()
+	for i in 18:
+		var ang := TAU * i / 18.0
+		pts.append(c + Vector2(cos(ang) * r.x, sin(ang) * r.y))
+	draw_colored_polygon(pts, col)
+
+
+## İki oyuncu yan yana (mavi ve yeşil tunik).
+func _two_players(c: Vector2, k: float, ink: Color, a: float) -> void:
+	for i in 2:
+		var x := (-9.0 if i == 0 else 9.0) * k
+		var tunic := Palette.TUNIC if i == 0 else Color(0.30, 0.60, 0.34)
+		var body := PackedVector2Array([c + Vector2(x - 8 * k, 16 * k), c + Vector2(x - 5 * k, -2 * k), c + Vector2(x + 5 * k, -2 * k), c + Vector2(x + 8 * k, 16 * k)])
+		_poly(body, Color(tunic, a), ink, 1.5 * k)
+		draw_circle(c + Vector2(x, -9 * k), 6.5 * k, Color(Palette.SKIN, a))
+		draw_line(c + Vector2(x - 9 * k, -14 * k), c + Vector2(x + 9 * k, -14 * k), Color(Palette.REED, a), 3.0 * k)
+
+
+func _pad_body(c: Vector2, k: float, ink: Color, a: float) -> void:
+	var r := Rect2(c + Vector2(-24, -13) * k, Vector2(48, 26) * k)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(Palette.PAPER.darkened(0.06), a)
+	sb.border_color = ink
+	sb.set_border_width_all(maxi(1, int(2.0 * k)))
+	sb.set_corner_radius_all(int(12 * k))
+	draw_style_box(sb, r)
+	draw_line(c + Vector2(-17, 0) * k, c + Vector2(-9, 0) * k, ink, 3.0 * k)
+	draw_line(c + Vector2(-13, -4) * k, c + Vector2(-13, 4) * k, ink, 3.0 * k)
+	draw_circle(c + Vector2(12, 1) * k, 8.0 * k, Color(Palette.MOSS_LIGHT, a))
+	draw_arc(c + Vector2(12, 1) * k, 8.0 * k, 0, TAU, 18, ink, 1.5 * k, true)
+	_text(c + Vector2(12, 1) * k, "A", int(13 * k), ink)
 
 
 func _arrow(c: Vector2, k: float, ink: Color) -> void:

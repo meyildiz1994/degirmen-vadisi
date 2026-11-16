@@ -28,6 +28,8 @@ SaveSystem="*res://autoload/save_system.gd"
 PlatformServices="*res://autoload/platform_services.gd"
 AudioManager="*res://autoload/audio_manager.gd"
 InputManager="*res://scripts/input_manager.gd"
+Net="*res://scripts/net/net_session.gd"
+SteamLobby="*res://scripts/net/steam_lobby.gd"
 
 [display]
 
@@ -147,3 +149,7 @@ anti_aliasing/quality/msaa_3d=1
 environment/defaults/default_clear_color=Color(0.95, 0.91, 0.83, 1)
 lights_and_shadows/positional_shadow/atlas_size=1024
 anti_aliasing/quality/msaa_3d.mobile=0
+
+[degirmen]
+
+net/relay_url="wss://degirmen-relay.onrender.com"

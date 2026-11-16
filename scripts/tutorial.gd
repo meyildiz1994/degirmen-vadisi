@@ -54,11 +54,11 @@ func setup(h: CanvasLayer, gather_world: GatherWorld, workshop: Interactable, p:
 	if m != null:
 		for site: RepairSite in [m.wall, m.wheel]:
 			site.state_changed.connect(_refresh)
-			site.cracked.connect(func(_ids): hud.show_toast("MSG_MILL_CRACKED", 4.5))
+			site.cracked.connect(func(_ids): if site.crack_cause == "weak": hud.show_toast("MSG_MILL_CRACKED", 4.5))
 		m.wall.completed.connect(func(): hud.show_toast("MSG_WALL_DONE", 3.5))
 	if b != null:
 		b.state_changed.connect(_refresh)
-		b.cracked.connect(func(_ids): hud.show_toast("MSG_BRIDGE_CRACKED", 4.5))
+		b.cracked.connect(func(_ids): if b.crack_cause == "weak": hud.show_toast("MSG_BRIDGE_CRACKED", 4.5))
 		b.completed.connect(func(): hud.show_toast("MSG_BRIDGE_REPAIRED", 4.0))
 	InputManager.device_changed.connect(func(_d): _refresh())
 	GameState.inventory.changed.connect(_refresh)

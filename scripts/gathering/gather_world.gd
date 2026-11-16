@@ -6,6 +6,10 @@ extends Node3D
 
 signal item_arrived(id: String, amount: int)
 signal resource_gathered(resource_id: String)
+## Bir kaynak bu tarafta tükendi (çevrimiçi: karşı tarafa bildirilir).
+signal resource_depleted(g: Gatherable)
+## Bu tarafta fidan dikildi.
+signal sapling_planted(kind: String, pos: Vector3)
 
 var player: Player
 var vegetation: Node3D
@@ -77,6 +81,7 @@ func _on_depleted(loot: Dictionary, g: Gatherable) -> void:
 		AudioManager.play_sfx_3d(g.sfx_done(), g.fx_point(), 2.0)
 		PlatformServices.vibrate(70)
 	resource_gathered.emit(g.resource_id)
+	resource_depleted.emit(g)
 
 
 func _on_tree_fell(pos: Vector3, _kind: String) -> void:
@@ -97,6 +102,74 @@ func _on_planted(seed_id: String, pos: Vector3) -> void:
 		return
 	fx.burst("dust", pos + Vector3(0, 0.1, 0), Vector3.UP, 0.8)
 	AudioManager.play_sfx_3d("sapling_plant", pos)
+	sapling_planted.emit(kind, pos)
+
+
+# --- İki kişilik: 2. oyuncunun vuruş geri bildirimi ve odak ışığı ---------------------------
+var _extra_highlights := {}
+
+
+func add_player(p: Player) -> void:
+	var h := FocusHighlight.new()
+	h.name = "Highlight%d" % p.index
+	add_child(h)
+	_extra_highlights[p] = h
+	p.focus_changed.connect(h.set_target)
+	p.gather.hit_landed.connect(_on_hit_by.bind(p))
+
+
+func remove_player(p: Player) -> void:
+	var h: FocusHighlight = _extra_highlights.get(p)
+	if h != null:
+		h.queue_free()
+	_extra_highlights.erase(p)
+
+
+func _on_hit_by(g: Gatherable, sweet: bool, p: Player) -> void:
+	var dir := (p.global_position - g.fx_point())
+	dir.y = 0.0
+	fx.hit(g.fx_kind(), g.fx_point(), dir.normalized(), sweet)
+	AudioManager.play_sfx_3d(g.sfx_hit(), g.fx_point())
+	if sweet:
+		AudioManager.play_sfx("sweet_hit", -2.0)
+
+
+# --- Çevrimiçi: karşı taraftaki toplamanın buradaki karşılığı ----------------------------
+func by_id(save_id: String) -> Gatherable:
+	return _by_id.get(save_id)
+
+
+## Karşı taraf bu kaynağı topladı: ganimet vermeden aynı duruma geç.
+func net_depleted(save_id: String, saved: Array, from: Vector3) -> void:
+	var g := by_id(save_id)
+	if g == null:
+		return
+	if g.state == Gatherable.State.READY:
+		if g is TreeGatherable:
+			var tg := g as TreeGatherable
+			tg.field.start_fall(tg.data, from)
+		if g.is_hand():
+			fx.burst(g.fx_kind(), g.fx_point(), Vector3.UP, 0.8)
+		else:
+			AudioManager.play_sfx_3d(g.sfx_done(), g.fx_point(), 2.0)
+	g.from_save(saved)
+
+
+## Karşı tarafın vuruşu: kıvılcım, ses ve kaynağın sallanması.
+func net_hit(save_id: String, sweet: bool, from: Vector3) -> void:
+	var g := by_id(save_id)
+	if g == null:
+		return
+	var dir := from - g.fx_point()
+	dir.y = 0.0
+	fx.hit(g.fx_kind(), g.fx_point(), dir.normalized(), sweet)
+	AudioManager.play_sfx_3d(g.sfx_hit(), g.fx_point())
+	g._on_hit(sweet)
+
+
+func net_plant(kind: String, pos: Vector3) -> void:
+	if tree_field.plant(kind, pos) != null:
+		fx.burst("dust", pos + Vector3(0, 0.1, 0), Vector3.UP, 0.8)
 
 
 # --- Kayıt -----------------------------------------------------------------------

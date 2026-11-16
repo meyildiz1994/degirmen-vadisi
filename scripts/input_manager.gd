@@ -22,6 +22,11 @@ var _stick := Vector2.ZERO
 var _dragging_look := false
 ## Oyuncu fareyle en az bir kez etrafa baktı mı (ipucu kartı için).
 var mouse_looked := false
+## İki kişilik oyunda 2. oyuncunun gamepad'i (-1: yok). Bu cihazın olayları 1. oyuncunun
+## aksiyonlarına, cihaz algılamasına ve bakışına karışmaz.
+var p2_pad := -1
+## 1. oyuncunun en son kullandığı gamepad (katılma sırasında ayırt etmek için).
+var last_pad := -1
 
 
 func _ready() -> void:
@@ -46,6 +51,10 @@ func _set_device(d: int) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if (event is InputEventJoypadButton or event is InputEventJoypadMotion) and p2_pad >= 0 and event.device == p2_pad:
+		return  # 2. oyuncunun gamepad'i: kendi PlayerInput'u okur
+	if event is InputEventJoypadButton:
+		last_pad = event.device
 	# --- Hangi cihaz kullanılıyor? -------------------------------------------
 	if event is InputEventScreenTouch or event is InputEventScreenDrag:
 		_set_device(Device.TOUCH)
@@ -87,6 +96,36 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		release_all_virtual()
 		_dragging_look = false
+
+
+## 2. oyuncuya bir gamepad ayır (-1: ayrılmış gamepad'i geri bırak). Oyun aksiyonlarındaki
+## gamepad olayları 1. oyuncuya kalan gamepad'e bağlanır; menü (ui_*) aksiyonları ortak kalır.
+func set_p2_pad(device: int) -> void:
+	p2_pad = device
+	var p1_pad := -1
+	if device >= 0:
+		p1_pad = 99  # 1. oyuncunun gamepad'i yoksa: hiçbir gerçek cihaz
+		for d: int in Input.get_connected_joypads():
+			if d != device:
+				p1_pad = d
+				break
+	for action: StringName in InputMap.get_actions():
+		if str(action).begins_with("ui_"):
+			continue
+		var events := InputMap.action_get_events(action)
+		var changed := false
+		for ev: InputEvent in events:
+			if ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
+				ev.device = p1_pad
+				changed = true
+		if changed:
+			InputMap.action_erase_events(action)
+			for ev: InputEvent in events:
+				InputMap.action_add_event(action, ev)
+	if device >= 0 and device == last_pad:
+		last_pad = -1
+		if self.device == Device.GAMEPAD:
+			_set_device(Device.TOUCH if GameState.is_mobile else Device.KEYBOARD_MOUSE)
 
 
 func set_touch_preview(enabled: bool) -> void:

@@ -205,3 +205,45 @@ VOL_MUSIC,Müzik,Music
 VOL_SFX,Efektler,Effects
 VOL_AMBIENCE,Doğa sesleri,Ambience
 VOL_UI,Arayüz,Interface
+ACTION_HIT,Vur,Hit
+NAME_INK_BLOT,Mürekkep Lekesi,Ink Blot
+NAME_INK_BIG,Kara Leke,Big Blot
+ENEMIES,Mürekkep lekeleri,Ink blots
+COOP_JOIN,İki kişilik: 2. oyuncu katılsın,Two players: let player 2 join
+COOP_WAITING,2. oyuncu bekleniyor (gamepad'de A),Waiting for player 2 (A on a gamepad)
+COOP_LEAVE,2. oyuncu ayrılsın,Player 2 leaves
+MSG_FIRST_WAVE,"Ormandan mürekkep lekeleri sızıyor! Onardığın yerleri eritmeye çalışacaklar, aletinle vurup dağıt.","Ink blots are seeping out of the forest! They'll try to dissolve what you repaired: hit them with your tool."
+MSG_WAVE_WARNING,Mürekkep lekeleri geliyor!,Ink blots are coming!
+MSG_WAVE_CLEARED,Lekeler dağıldı. Vadi yine sakin.,The blots are gone. The valley is calm again.
+MSG_INK_BROKE,"Lekeler bir parçayı eritti: Onarım noktasından yenisini tak.",The blots dissolved a part: fit a new one at the repair point.
+MSG_DOWNED,Sersemledin! Arkadaşın yanına gelirse kalkarsın.,You're dazed! Your friend can help you up.
+MSG_DOWNED_SOLO,Sersemledin… Birazdan atölyenin önünde kendine geleceksin.,You're dazed… You'll come to by the workshop shortly.
+MSG_COOP_JOINED,2. oyuncu katıldı! Heybe ortak.,Player 2 joined! The bag is shared.
+NAME_RODENT,Kemirgen,Rodent
+NAME_FOREST_SPIRIT,Orman Ruhu,Forest Spirit
+NAME_FLOOD,Sel Suyu,Flood Water
+MSG_INTRO_RODENT,"Kemirgenler! Ahşap parçaları kemiriyorlar. Vurunca kaçarlar ama geri dönerler.","Rodents! They gnaw wooden parts. Hit them and they run, but they come back."
+MSG_INTRO_SPIRIT,"Bir orman ruhu! Uzaktan sarmaşık salıp bütün yapıyı sarıyor. Vurdukça ışınlanır, peşini bırakma.","A forest spirit! It sends vines over a whole structure. It blinks away when hit: keep after it."
+MSG_INTRO_FLOOD,"Sel geliyor! Dere boyunca akıp köprüyü ve çarkı döver. Vurdukça küçülür.","A flood is coming! It rushes down the stream and pounds the bridge and wheel. Each hit shrinks it."
+NET_HOST,Oyun aç (arkadaşın sana katılsın),Host a game (your friend joins you)
+NET_JOIN,Katıl,Join
+NET_LEAVE,Çevrimiçi oyundan ayrıl,Leave online game
+NET_ADDRESS_HINT,Oda kodu ya da adres,Room code or address
+NET_HELP,Arkadaşın oyun açsın ve oda kodunu sana söylesin.,Ask your friend to host and tell you the room code.
+NET_WAITING,Arkadaşın bekleniyor. Adresin: %s,Waiting for your friend. Your address: %s
+NET_CONNECTING,Bağlanıyor…,Connecting…
+NET_ONLINE,Arkadaşınla bağlısın.,Connected with your friend.
+MSG_NET_JOINED,Arkadaşın vadiye geldi! Heybe ortak.,Your friend arrived in the valley! The bag is shared.
+MSG_NET_LEFT,Arkadaşın vadiden ayrıldı.,Your friend left the valley.
+MSG_NET_FAILED,Bağlanılamadı. Adresi ve aynı ağda olduğunuzu kontrol et.,Couldn't connect. Check the address and that you are on the same network.
+MSG_NET_LOST,Bağlantı koptu. Kendi vadine döndün.,Connection lost. You are back in your own valley.
+MSG_NET_PORT,Oyun açılamadı: bağlantı noktası kullanımda.,Couldn't host: the port is in use.
+MSG_NET_VERSION,Arkadaşının oyun sürümü farklı.,Your friend has a different game version.
+MSG_NET_ADDRESS,Önce arkadaşının adresini yaz.,Type your friend's address first.
+NET_TITLE,Çevrimiçi,Online
+NET_WAITING_CODE,Arkadaşın bekleniyor. Oda kodu: %s,Waiting for your friend. Room code: %s
+MSG_NET_RELAY,Oda sunucusuna ulaşılamadı. Aynı ağdaki arkadaşın adresle katılabilir.,Couldn't reach the room server. A friend on the same network can still join by address.
+MSG_NET_NO_ROOM,Bu kodla bir oda yok. Kodu kontrol et.,No room with that code. Check the code.
+MSG_NET_FULL,Bu oda dolu.,That room is full.
+NET_WAITING_CODE_SHORT,Arkadaşın bekleniyor. Ona bu oda kodunu söyle:,Waiting for your friend. Tell them this room code:
+NET_STEAM_INVITE,Steam'den arkadaşını davet et,Invite a Steam friend

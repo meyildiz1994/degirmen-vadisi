@@ -161,6 +161,8 @@ func _run() -> void:
 	await _test_bridge(world, player)
 	await _test_mouse(player)
 	await _test_polish(world, player)
+	await _test_combat(world, player)
+	await _test_net(world, player)
 	# Ritim kapalı: basılı tutunca vurur
 	gs.set_rhythm_hits(false)
 	print("\nSonuç: %s (%d hata)" % ["BAŞARILI" if _fails == 0 else "BAŞARISIZ", _fails])
@@ -468,3 +470,269 @@ func _test_item_memory() -> void:
 	check(vs.sliders["Music"].custom_minimum_size.y >= 48.0, "ses çubuğu ≥48 px")
 	vs.sliders["Music"].value = 0.8
 	vs.queue_free()
+
+
+## Mürekkep lekeleri ve iki kişilik oyun.
+func _test_combat(world: Node, player: Player) -> void:
+	print("== mürekkep lekeleri")
+	var d: EnemyDirector = world.director
+	var c1 := EnemyDirector.composition(1, 1, 1)
+	var c5 := EnemyDirector.composition(5, 3, 1)
+	var c5co := EnemyDirector.composition(5, 3, 2)
+	check(c1["small"] == 2 and c1["big"] == 0, "ilk dalga küçük bir tanışma")
+	check(c5["small"] > c1["small"] and c5["big"] >= 1, "dalgalar büyür, Kara Leke gelir")
+	check(c5co["small"] > c5["small"] and c5co["big"] > c5["big"], "iki kişide daha kalabalık")
+	await _frames(3)
+	check(d.phase != EnemyDirector.Phase.DORMANT, "onarım sonrası dalga yöneticisi uyandı")
+	var bridge: RepairSite = world.bridge
+	var slot: String = bridge.damageable_slots()[0]
+	var hp := Repair.slot_max_hp("bridge", bridge.state, slot)
+	check(hp > 20.0, "takılı parçanın dayanıklılığı var (%.0f)" % hp)
+	# Dalgayı başlat
+	d.timer = 0.0
+	d.phase = EnemyDirector.Phase.CALM
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	check(d.phase == EnemyDirector.Phase.WARNING, "uyarı aşaması")
+	d.timer = 0.0
+	for i in 4:
+		await get_tree().physics_frame
+	check(d.phase == EnemyDirector.Phase.WAVE and d.blots.size() >= 1, "dalga başladı, leke sızdı")
+	var b: ValleyEnemy = d.blots[0]
+	check(b.site != null and b.slot_id != "", "leke bir yapı ve parça seçti")
+	# Lekeyi yapıya taşı: parçayı aşındırsın
+	b.global_position = b.goal
+	b.state = ValleyEnemy.State.GNAW
+	b.player_damage = 0
+	for i in 30:
+		await get_tree().physics_frame
+	check(b.site.slot_health(b.slot_id) < 1.0, "leke parçayı eritiyor")
+	var target_site := b.site
+	var target_slot := b.slot_id
+	var broke := target_site.damage_slot(target_slot, 9999.0)
+	check(broke and Repair.is_cracked(target_site.state, target_slot) and target_site.crack_cause == "ink", "eriyen parça çatladı")
+	check(not target_site.is_complete(), "yapı yeniden onarım bekliyor")
+	# Vuruş: alet hasarı, leke dağılır
+	player.input_enabled = true
+	b.global_position = player.global_position + Vector3(1.0, 0, 0)
+	var t := player.best_weapon()
+	check(t != null and Player.weapon_damage(t) > Player.HAND_DAMAGE, "alet yumruktan güçlü")
+	var hits := 0
+	while is_instance_valid(b) and b.alive() and hits < 20:
+		player._attack_cd = 0.0
+		player.try_attack(b)
+		hits += 1
+	check(hits <= 3 and not d.blots.has(b), "küçük leke birkaç vuruşta dağıldı (%d)" % hits)
+	print("== can ve sersemleme")
+	player._invuln = 0.0
+	player.take_damage(1, player.global_position + Vector3(1, 0, 0))
+	check(player.health == Player.MAX_HEALTH - 1, "darbe canı azaltır")
+	for i in Player.MAX_HEALTH:
+		player._invuln = 0.0
+		player.take_damage(1, player.global_position)
+	check(player.downed and player.health == 0, "can bitince sersemler")
+	print("== iki kişilik")
+	var coop: CoopManager = world.coop
+	var p2 := coop.join(0)
+	await _frames(2)
+	check(coop.is_active() and p2.index == 1 and p2.partner == player, "2. oyuncu katıldı")
+	check(world.hud.players.size() == 2, "arayüz iki oyuncuyu biliyor")
+	check(get_viewport().get_camera_3d() == player.camera, "ortak kamera 1. oyuncuda")
+	check(InputManager.p2_pad == 0, "gamepad 2. oyuncuya ayrıldı")
+	var ev := InputMap.action_get_events("interact")
+	var moved := true
+	for e in ev:
+		if e is InputEventJoypadButton and e.device == 0:
+			moved = false
+	check(moved, "1. oyuncunun aksiyonları 2. gamepad'i dinlemiyor")
+	p2.global_position = player.global_position + Vector3(0.8, 0, 0)
+	for i in 160:
+		await get_tree().physics_frame
+	check(not player.downed, "arkadaş yanında durunca kaldırdı")
+	check(p2.pinput.move_vector() == Vector2.ZERO, "2. oyuncunun girişi kendi gamepad'inden")
+	var data := {}
+	player.save_state(data)
+	p2.save_state(data)
+	check(data.has("player") and data["player"]["x"] == player.global_position.x, "kayıtta yalnızca 1. oyuncu")
+	coop.leave()
+	await _frames(2)
+	check(not coop.is_active() and InputManager.p2_pad == -1 and player.partner == null, "2. oyuncu ayrıldı")
+	var restored := false
+	for e in InputMap.action_get_events("interact"):
+		if e is InputEventJoypadButton and e.device == -1:
+			restored = true
+	check(restored, "gamepad yeniden 1. oyuncunun")
+	print("== kemirgen, orman ruhu, sel")
+	check(ValleyEnemy.damage_factor(ValleyEnemy.Kind.RODENT, "beam:oak") > ValleyEnemy.damage_factor(ValleyEnemy.Kind.RODENT, "beam:stone"), "kemirgen ahşabı taştan çok kemirir")
+	var c2 := EnemyDirector.composition(2, 1, 1)
+	var c3 := EnemyDirector.composition(3, 1, 1)
+	var c4 := EnemyDirector.composition(4, 2, 1)
+	check(c2["rodent"] >= 3 and c2["spirit"] == 0, "2. dalgada kemirgenler")
+	check(c3["spirit"] >= 1, "3. dalgada orman ruhu")
+	check(c4["flood"] >= 1 and EnemyDirector.composition(4, 2, 1, false)["flood"] == 0, "4. dalgada sel (dere yapısı varsa)")
+	# Yapıları tazele
+	for site: RepairSite in d.sites:
+		for id: String in site.damageable_slots():
+			Repair.slot_state(site.state, id)["wear"] = 0.0
+	var wall: RepairSite = world.mill.wall
+	var rod := d._spawn(ValleyEnemy.Kind.RODENT)
+	check(rod.site != null and rod.slot_id != "", "kemirgen bir parça seçti")
+	var spi := d._spawn(ValleyEnemy.Kind.SPIRIT)
+	spi.site = wall
+	spi.goal = wall.attack_points()[0]
+	spi.global_position = spi.goal + Vector3(1.5, 0, 0)
+	spi.state = ValleyEnemy.State.GNAW
+	for i in 20:
+		await get_tree().physics_frame
+	var all_worn := true
+	for id: String in wall.damageable_slots():
+		if wall.slot_health(id) >= 1.0:
+			all_worn = false
+	check(all_worn, "orman ruhu yapının bütün parçalarını sarıyor")
+	var before_pos := spi.global_position
+	player._attack_cd = 0.0
+	player.try_attack(spi)
+	check(spi.alive() and spi.global_position.distance_to(before_pos) > 1.0, "vurulan ruh ışınlandı")
+	var fl := d._spawn(ValleyEnemy.Kind.FLOOD)
+	var z0 := fl.global_position.z
+	fl.global_position.z = bridge.global_position.z - 2.0
+	var bridge_before := 0.0
+	for id: String in bridge.damageable_slots():
+		bridge_before += bridge.slot_health(id)
+	for i in 30:
+		await get_tree().physics_frame
+	var bridge_after := 0.0
+	for id: String in bridge.damageable_slots():
+		bridge_after += bridge.slot_health(id)
+	check(z0 < 0.0 and fl.global_position.z > bridge.global_position.z - 2.0, "sel dere boyunca güneye akıyor")
+	check(bridge_after < bridge_before, "sel köprüyü dövüyor")
+	var fhp := fl.hp
+	player._attack_cd = 0.0
+	player.global_position = fl.global_position + Vector3(1.0, 0, 0)
+	player.try_attack(fl)
+	check(fl.hp < fhp, "sel vurulunca küçülür")
+	check(d.seen.has(ValleyEnemy.Kind.FLOOD), "görülen türler kaydediliyor")
+	print("== ayar ve kayıt")
+	var sd := {}
+	d.save_state(sd)
+	check(sd["enemies"]["phase"] == EnemyDirector.Phase.CALM, "süren dalga sakin olarak kaydedilir")
+	gs.set_enemies_enabled(false)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	check(d.blots.is_empty() and d.phase != EnemyDirector.Phase.WAVE, "ayardan kapatınca lekeler gider (%d, %d, %s)" % [d.blots.size(), d.phase, get_tree().paused])
+	gs.set_enemies_enabled(true)
+
+
+## Çevrimiçi: ağa giden özetler aynı durumu karşı tarafta kurar (bağlantısız sınama).
+func _test_net(world: Node, player: Player) -> void:
+	print("== çevrimiçi özetler")
+	var d: EnemyDirector = world.director
+	GameState.set_enemies_enabled(true)
+	await _frames(2)
+	d.phase = EnemyDirector.Phase.WAVE
+	d._queue = [0]
+	var e1 := d._spawn(ValleyEnemy.Kind.RODENT)
+	var e2 := d._spawn(ValleyEnemy.Kind.SPIRIT)
+	check(e1.net_id != e2.net_id and e1.net_id > 0, "düşmanların ağ kimliği var")
+	var pack := d.net_pack()
+	# Katılan tarafı aynı sahnede ikinci bir yöneticiyle taklit et
+	var mirror := EnemyDirector.new()
+	world.add_child(mirror)
+	mirror.setup([world.bridge, world.mill.wall, world.mill.wheel], world.gather_world.fx)
+	mirror.mirror = true
+	mirror.apply_net(pack)
+	check(mirror.blots.size() == pack[3].size() and mirror.blots.all(func(b): return b.puppet), "katılan tarafta kopyalar kuruldu")
+	var copy: ValleyEnemy = mirror._by_net.get(e1.net_id)
+	check(copy != null and copy.kind == ValleyEnemy.Kind.RODENT, "kopya doğru tür")
+	e1.global_position += Vector3(2, 0, 0)
+	e1.hp = 1.0
+	e1.set_physics_process(false)
+	var target := e1.global_position
+	mirror.apply_net(d.net_pack())
+	for i in 30:
+		await get_tree().physics_frame
+	check(copy.global_position.distance_to(target) < 0.3 and is_equal_approx(copy.hp, 1.0), "kopya ev sahibini izliyor")
+	mirror.net_died(e2.net_id)
+	await _frames(2)
+	check(not mirror.blots.any(func(b): return is_instance_valid(b) and b.net_id == e2.net_id), "dağılan düşman katılanda da dağıldı")
+	var pack2 := d.net_pack()
+	pack2[3] = []
+	mirror.apply_net(pack2)
+	await _frames(2)
+	check(mirror.blots.is_empty(), "artık olmayan kopya kaldırıldı")
+	mirror.queue_free()
+	for b in d.blots.duplicate():
+		b.queue_free()
+	d.blots.clear()
+	d._calm_down()
+	# Yapı durumu: karşı tarafın taktığı parça buraya da takılır
+	var bridge: RepairSite = world.bridge
+	var st := bridge.state.duplicate(true)
+	var slot: String = bridge.damageable_slots()[0]
+	Repair.erode(st, "bridge", slot, 99999.0)
+	var got_crack := [false]
+	var cb := func(_ids): got_crack[0] = true
+	bridge.cracked.connect(cb)
+	bridge.net_apply(st)
+	bridge.cracked.disconnect(cb)
+	check(Repair.is_cracked(bridge.state, slot) and not bridge.is_complete(), "karşıdaki çatlak buraya geldi")
+	# Oyuncu özeti
+	var ghost: Player = preload("res://scenes/player/player.tscn").instantiate()
+	ghost.index = 1
+	ghost.net_remote = true
+	world.add_child(ghost)
+	player.health = 3
+	ghost.apply_net(player.net_state())
+	check(ghost.health == 3 and ghost.global_position.distance_to(player.global_position) < 0.01, "karakter özeti konum ve canı taşıyor")
+	var moved := player.net_state()
+	moved[0] = float(moved[0]) + 3.0
+	moved[8] = true
+	ghost.apply_net(moved)
+	for i in 30:
+		await get_tree().physics_frame
+	check(ghost.downed and absf(ghost.global_position.x - float(moved[0])) < 0.2, "uzaktaki karakter yürüyüp sersemledi")
+	ghost.queue_free()
+	player.heal_full()
+	check(Net.is_room_code("kxrwta") and not Net.is_room_code("192.168.1.4") and not Net.is_room_code("ABC12"), "oda kodu adresten ayrılıyor")
+	check(Net.local_address() == "" or Net.local_address().contains("."), "yerel adres okunuyor (%s)" % Net.local_address())
+	await _test_steam_lobby()
+
+
+## Steam daveti: lobi oda kodunu taşır, davet edilen o kodla katılır (sahte Steam ile).
+func _test_steam_lobby() -> void:
+	print("== steam daveti")
+	var fake := FakeSteam.new()
+	SteamLobby.bind(fake)
+	check(not SteamLobby.can_invite(), "oyun açılmadan davet yok")
+	Net.host_code = "QWERTY"
+	Net._set_status(Net.Status.HOSTING)
+	await _frames(3)
+	var lid := SteamLobby.lobby_id
+	check(lid != 0 and fake.getLobbyData(lid, SteamLobby.CODE_KEY) == "QWERTY", "lobi kuruldu, oda kodu lobiye yazıldı")
+	check(SteamLobby.can_invite(), "davet düğmesi açık")
+	SteamLobby.invite()
+	check(fake.calls.has("invite"), "Steam davet penceresi açıldı")
+	Net._close()
+	check(SteamLobby.lobby_id == 0 and fake.calls.has("leaveLobby"), "oyun kapanınca lobiden çıkıldı")
+	# Katılan: davet kabul edilir -> lobiye girer -> kodu okur -> aracıya bağlanır
+	fake.data[lid] = {SteamLobby.CODE_KEY: "QWERTY"}
+	var seen := [false]
+	var watch := func(st): if st == Net.Status.CONNECTING and Net.is_guest(): seen[0] = true
+	Net.status_changed.connect(watch)
+	fake.join_requested.emit(lid, 7)
+	await _frames(3)
+	Net.status_changed.disconnect(watch)
+	check(seen[0], "davetle oda koduna bağlanmaya başladı")
+	Net._close()
+	seen[0] = false
+	Net.status_changed.connect(watch)
+	fake.join_game_requested.emit(7, "+connect_lobby %d" % lid)
+	await _frames(3)
+	Net.status_changed.disconnect(watch)
+	check(seen[0], "arkadaş listesinden 'Oyuna katıl' da bağlanıyor")
+	Net._close()
+	fake.join_requested.emit(424242, 7)
+	await _frames(3)
+	check(not Net.active(), "olmayan lobiye davet bağlanmaz")
+	SteamLobby.steam = null
+	fake.free()

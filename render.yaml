@@ -1,0 +1,9 @@
+# Render.com "Blueprint": oda kodu aracısını ücretsiz planda yayına alır.
+services:
+  - type: web
+    name: degirmen-relay
+    runtime: docker
+    plan: free
+    rootDir: server/relay
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health

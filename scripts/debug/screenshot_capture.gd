@@ -48,7 +48,24 @@ func _ready() -> void:
 		var hud := get_parent().get_node_or_null("HUD")
 		if hud:
 			hud.show_toast(str(_args["toast"]), 30.0)
+	# Çevrimiçi deneme: --net_host=1 (ev sahibi) / --net_join=127.0.0.1 (katılan).
+	if _args.has("fake_steam") and not SteamLobby.available():
+		SteamLobby.bind(FakeSteam.new())   # --fake_steam=1: Steam davet düğmesini göster
+	if _args.has("net_host") and not Net.active():
+		Net.host()
+	if _args.has("net_join") and not Net.auto_join_done:
+		Net.auto_join_done = true
+		Net.join(str(_args["net_join"]))
+		_net_timeout()
+		return   # bağlanınca vadi ev sahibinin kaydıyla yeniden kurulur; çekim orada
 	_capture.call_deferred()
+
+
+func _net_timeout() -> void:
+	await get_tree().create_timer(float(_args.get("net_timeout", "60"))).timeout
+	if not Net.has_partner():
+		print("NETPROBE timeout status=%d" % Net.status)
+		get_tree().quit(2)
 
 
 func _capture() -> void:
@@ -62,15 +79,59 @@ func _capture() -> void:
 		if hud:
 			hud.set_quest_log_open(true)
 	await _gather_scenario()
+	if (_args.has("net_host") and not _args.has("net_alone")) or _args.has("net_join"):
+		await _net_scenario()
 	var frames := int(_args.get("frames", "90"))
 	for i in frames:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
+	if Net.active():
+		_net_probe()
 	var img := get_viewport().get_texture().get_image()
 	var path := str(_args["screenshot"])
 	var err := img.save_png(path)
 	print("ScreenshotCapture: %s -> %s (%d)" % [path, ProjectSettings.globalize_path(path), err])
 	get_tree().quit()
+
+
+## Arkadaş gelene kadar bekle; ev sahibi isterse hemen bir dalga başlatır (--net_wave=1),
+## katılan isterse en yakın düşmana birkaç kez vurur (--net_attack=N).
+func _net_scenario() -> void:
+	if _args.has("net_join"):
+		_net_timeout()
+	while not Net.has_partner():
+		await get_tree().process_frame
+	var world := get_parent()
+	if _args.has("net_wave") and Net.is_host():
+		var d: EnemyDirector = world.director
+		d.phase = EnemyDirector.Phase.CALM
+		d.timer = 0.1
+	if _args.has("net_wait"):
+		await get_tree().create_timer(float(_args["net_wait"])).timeout
+	if _args.has("net_attack"):
+		var p: Player = world.player
+		for i in int(_args["net_attack"]):
+			var best: ValleyEnemy = null
+			for b in world.director.blots:
+				if is_instance_valid(b) and b.alive() and (best == null or b.global_position.distance_to(p.global_position) < best.global_position.distance_to(p.global_position)):
+					best = b
+			if best != null:
+				p._attack_cd = 0.0
+				p.try_attack(best)
+			await get_tree().create_timer(0.5).timeout
+
+
+func _net_probe() -> void:
+	var world := get_parent()
+	var r := Net.remote
+	var hp := []
+	for b in world.director.blots:
+		if is_instance_valid(b):
+			hp.append("%d:%s:%.1f" % [b.net_id, ValleyEnemy.Kind.keys()[b.kind], b.hp])
+	print("NETPROBE role=%s partner=%s remote=%s enemies=%d phase=%d wave=%d hp=%s oak=%d tools=%d bridge=%s" % [
+		Net.Role.keys()[Net.role], Net.has_partner(), str(r.global_position.snapped(Vector3.ONE * 0.1)) if r else "-",
+		world.director.blots.size(), world.director.phase, world.director.wave, ",".join(hp),
+		GameState.inventory.count("oak"), GameState.inventory.tools.size(), world.bridge.is_complete()])
 
 
 func _gather_scenario() -> void:
@@ -159,12 +220,142 @@ func _gather_scenario() -> void:
 		await _mill_scenario(world, player)
 	if _args.has("bridge") or _args.has("repair_open"):
 		await _bridge_scenario(world)
+	if _args.has("enemy"):
+		await _enemy_portrait(world)
+	if _args.has("coop") or _args.has("ink") or _args.has("hurt") or _args.has("warn"):
+		await _combat_scenario(world, player)
 	if _args.has("tool_memory"):
 		_aged_tools()
 	if _args.has("inventory_open"):
 		world.get_node("HUD").toggle_inventory()
 	if _args.has("pause"):
 		world.get_node("HUD").set_paused(true)
+
+
+## --coop=1 (2. oyuncu katılır) --ink=küçük,iri (lekeler köprüde / oyuncuda)
+## --wear=0..1 (köprü parçaları aşınmış) --hurt=N (1. oyuncunun canı) --downed=revive(0..1)
+## --warn=1 (dalga uyarısı) --first_wave=1 (ilk dalga kartı)
+func _combat_scenario(world: Node, player: Player) -> void:
+	var d: EnemyDirector = world.director
+	if _args.has("coop"):
+		var p2: Player = world.coop.join(0)
+		var side := Basis(Vector3.UP, player.yaw) * Vector3(1.6, 0, -0.6)
+		p2.global_position = player.global_position + side
+		p2.global_position.y = ValleyShape.height(p2.global_position.x, p2.global_position.z) + 0.1
+	await get_tree().process_frame
+	if _args.has("wear"):
+		var bridge: RepairSite = world.bridge
+		var w := float(_args["wear"])
+		var i := 0
+		for id: String in bridge.damageable_slots():
+			var m := Repair.slot_max_hp("bridge", bridge.state, id)
+			Repair.slot_state(bridge.state, id)["wear"] = m * w * (0.5 + 0.5 * i)
+			i += 1
+	if _args.has("warn"):
+		d.phase = EnemyDirector.Phase.CALM
+		d.timer = 0.0
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		if _args.has("first_wave"):
+			world._on_wave_warning(1, d._spawn_dir)
+		d.timer = 999.0
+	if _args.has("ink"):
+		var n := str(_args["ink"]).split_floats(",")
+		d.phase = EnemyDirector.Phase.WAVE
+		d.wave = maxi(d.wave, 3)
+		for k in int(n[0]):
+			var b := ValleyEnemy.new().setup(ValleyEnemy.Kind.SMALL, d)
+			d.add_child(b)
+			d.blots.append(b)
+			d.retarget(b)
+			b.global_position = b.goal + Vector3(randf_range(-0.6, 0.6), 0, randf_range(-0.6, 0.6))
+			b.state = ValleyEnemy.State.GNAW
+		for k in (int(n[1]) if n.size() > 1 else 0):
+			var b := ValleyEnemy.new().setup(ValleyEnemy.Kind.BIG, d)
+			d.add_child(b)
+			d.blots.append(b)
+			d.retarget(b)
+			var fwd := Basis(Vector3.UP, player.yaw) * Vector3(-1.2, 0, -2.6)
+			b.global_position = player.global_position + fwd
+			b.player_damage = 0  # poz için sabit dursun
+			b.state = ValleyEnemy.State.FLEE
+			b._flee_t = 999.0
+		d._queue = [0, 0]
+	if _args.has("hurt"):
+		player.health = int(_args["hurt"])
+		player._since_hurt = 0.0
+	if _args.has("downed"):
+		var target: Player = world.coop.p2 if world.coop.p2 != null else player
+		target.health = 0
+		target._set_downed(true)
+		await get_tree().create_timer(0.6).timeout
+		target.revive = float(_args["downed"])
+		target.set_physics_process(false)
+
+
+## --enemy=small|big|rodent|spirit|flood[,N] — o türden N tane köprünün batı ucunda;
+## --enemy_cam=dx,dy,dz kamera düşmana göre (varsayılan yakın plan).
+func _enemy_portrait(world: Node) -> void:
+	var d: EnemyDirector = world.director
+	var parts := str(_args["enemy"]).split(",")
+	var kinds := {"small": ValleyEnemy.Kind.SMALL, "big": ValleyEnemy.Kind.BIG, "rodent": ValleyEnemy.Kind.RODENT, "spirit": ValleyEnemy.Kind.SPIRIT, "flood": ValleyEnemy.Kind.FLOOD}
+	var kind: int = kinds.get(parts[0], ValleyEnemy.Kind.SMALL)
+	var n := int(parts[1]) if parts.size() > 1 else 1
+	var bridge: RepairSite = world.bridge
+	var anchor: Vector3 = bridge.attack_points()[0]
+	if kind == ValleyEnemy.Kind.SPIRIT:
+		anchor = world.mill.wall.attack_points()[0]
+	d.phase = EnemyDirector.Phase.WAVE
+	d._queue = [0]
+	var focus := anchor
+	var first: ValleyEnemy = null
+	for i in n:
+		var e := d._spawn(kind)
+		if kind == ValleyEnemy.Kind.FLOOD:
+			var z := bridge.global_position.z - 5.0
+			e.global_position = Vector3(ValleyShape.river_x(z), ValleyShape.water_y(z) - 0.1, z)
+			e.speed = 0.0
+			focus = e.global_position
+		else:
+			var off := Vector3(cos(i * 2.1) * 1.1, 0, sin(i * 2.1) * 1.1) if n > 1 else Vector3.ZERO
+			e.global_position = anchor + off
+			e.goal = e.global_position
+			if kind == ValleyEnemy.Kind.SPIRIT:
+				e.site = world.mill.wall
+			e.state = ValleyEnemy.State.GNAW
+			e.player_damage = 0
+			if i == 0:
+				focus = e.global_position
+		if i == 0:
+			first = e
+	if _args.has("enemy_at"):
+		# Portre: açık bir yerde, kameraya dönük ve yerinde.
+		var at: PackedFloat64Array = str(_args["enemy_at"]).split_floats(",")
+		var i := 0
+		for e: ValleyEnemy in d.blots:
+			var p := Vector3(at[0] + (i - (n - 1) * 0.5) * 0.9, 0, at[1] + absf(i - (n - 1) * 0.5) * 0.4)
+			e.global_position = Vector3(p.x, e._ground_y(p.x, p.z), p.z)
+			e.speed = 0.0
+			e.state = ValleyEnemy.State.FLEE
+			e._flee_t = 999.0
+			e.rotation.y = deg_to_rad(float(at[2]) if at.size() > 2 else 0.0)
+			i += 1
+	for i in 8:
+		await get_tree().physics_frame
+	# Varsayılan: düşmanın yüzüne, hafif yandan ve yukarıdan bakan kamera.
+	var fwd := -first.global_transform.basis.z
+	fwd.y = 0.0
+	var dist := 5.5 if kind == ValleyEnemy.Kind.FLOOD else (3.6 if kind == ValleyEnemy.Kind.SPIRIT else 2.6)
+	var v := (fwd.normalized().rotated(Vector3.UP, 0.45) * dist) + Vector3(0, dist * 0.45, 0)
+	focus = first.global_position
+	if _args.has("enemy_cam"):
+		var a: PackedFloat64Array = str(_args["enemy_cam"]).split_floats(",")
+		v = Vector3(a[0], a[1], a[2])
+	var cam := Camera3D.new()
+	cam.fov = 50.0
+	world.add_child(cam)
+	cam.look_at_from_position(focus + v, focus + Vector3(0, 0.5, 0))
+	cam.make_current()
 
 
 ## --tool_memory=1: heybedeki ilk alet yaşlanmış, isim kazanmış, geçmişli ve aşınmış.
