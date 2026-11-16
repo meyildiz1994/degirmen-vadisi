@@ -29,6 +29,7 @@ PlatformServices="*res://autoload/platform_services.gd"
 AudioManager="*res://autoload/audio_manager.gd"
 InputManager="*res://scripts/input_manager.gd"
 Net="*res://scripts/net/net_session.gd"
+SteamLobby="*res://scripts/net/steam_lobby.gd"
 
 [display]
 

@@ -52,6 +52,7 @@ var net_address: LineEdit
 var net_join_row: HBoxContainer
 var net_status: Label
 var net_code: Label
+var net_steam_button: Button
 
 
 func _ready() -> void:
@@ -216,6 +217,14 @@ func _build_net_ui(vbox: VBoxContainer) -> void:
 	net_code.add_theme_color_override("font_color", Palette.SUNSET.darkened(0.25))
 	net_code.visible = false
 	vbox.add_child(net_code)
+	net_steam_button = Button.new()
+	net_steam_button.name = "NetSteamButton"
+	net_steam_button.visible = false
+	vbox.add_child(net_steam_button)
+	net_steam_button.pressed.connect(func():
+		AudioManager.play_ui("ui_click")
+		SteamLobby.invite())
+	SteamLobby.changed.connect(_refresh_net)
 	Net.status_changed.connect(func(_s): _refresh_net())
 	Net.partner_joined.connect(_refresh_net)
 	Net.partner_left.connect(_refresh_net)
@@ -278,6 +287,8 @@ func _refresh_net() -> void:
 	for ch in Net.host_code:
 		spaced += ch + " "
 	net_code.text = spaced.strip_edges() if net_code.visible else ""
+	net_steam_button.text = tr("NET_STEAM_INVITE")
+	net_steam_button.visible = SteamLobby.can_invite()
 	if coop_button != null:
 		coop_button.disabled = Net.active()
 	_fit_pause_panel.call_deferred()

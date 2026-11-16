@@ -166,3 +166,15 @@ godot --path . -- --screenshot=user://final.png --mill_wall=stone,stone,stone --
 
 `.env` (ElevenLabs anahtarı) `.gitignore`'da ve tüm export preset'lerinde `exclude_filter` ile hariç.
 `tools/` klasörü `.gdignore` ile içe aktarılmaz ve export'a girmez.
+
+## Steam daveti
+
+Steam'deki bir arkadaşı davet etmek için oyun açılınca duraklatma menüsünde
+"Steam'den arkadaşını davet et" düğmesi çıkar. Steam yalnızca oda kodunu taşır;
+bağlantı yine oda sunucusundan (relay) geçer. Davet kabul edilince oyun kendiliğinden katılır,
+oyun kapalıysa Steam onu açar (`+connect_lobby`).
+
+Kurulum (bir kez): Godot editöründe **AssetLib** sekmesinde "GodotSteam GDExtension"
+eklentisini bul, Download → Install. Steam açık olmalı. Gerçek Steam App ID gelene kadar
+480 (Spacewar test uygulaması) kullanılır (`autoload/platform_services.gd`).
+Eklenti yoksa, mobilde ya da Steam kapalıyken düğme görünmez, oda kodu çalışmaya devam eder.

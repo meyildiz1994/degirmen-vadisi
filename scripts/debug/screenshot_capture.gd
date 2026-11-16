@@ -49,6 +49,8 @@ func _ready() -> void:
 		if hud:
 			hud.show_toast(str(_args["toast"]), 30.0)
 	# Çevrimiçi deneme: --net_host=1 (ev sahibi) / --net_join=127.0.0.1 (katılan).
+	if _args.has("fake_steam") and not SteamLobby.available():
+		SteamLobby.bind(FakeSteam.new())   # --fake_steam=1: Steam davet düğmesini göster
 	if _args.has("net_host") and not Net.active():
 		Net.host()
 	if _args.has("net_join") and not Net.auto_join_done:

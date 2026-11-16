@@ -695,3 +695,37 @@ func _test_net(world: Node, player: Player) -> void:
 	player.heal_full()
 	check(Net.is_room_code("kxrwta") and not Net.is_room_code("192.168.1.4") and not Net.is_room_code("ABC12"), "oda kodu adresten ayrılıyor")
 	check(Net.local_address() == "" or Net.local_address().contains("."), "yerel adres okunuyor (%s)" % Net.local_address())
+	await _test_steam_lobby()
+
+
+## Steam daveti: lobi oda kodunu taşır, davet edilen o kodla katılır (sahte Steam ile).
+func _test_steam_lobby() -> void:
+	print("== steam daveti")
+	var fake := FakeSteam.new()
+	SteamLobby.bind(fake)
+	check(not SteamLobby.can_invite(), "oyun açılmadan davet yok")
+	Net.host_code = "QWERTY"
+	Net._set_status(Net.Status.HOSTING)
+	await _frames(3)
+	var lid := SteamLobby.lobby_id
+	check(lid != 0 and fake.getLobbyData(lid, SteamLobby.CODE_KEY) == "QWERTY", "lobi kuruldu, oda kodu lobiye yazıldı")
+	check(SteamLobby.can_invite(), "davet düğmesi açık")
+	SteamLobby.invite()
+	check(fake.calls.has("invite"), "Steam davet penceresi açıldı")
+	Net._close()
+	check(SteamLobby.lobby_id == 0 and fake.calls.has("leaveLobby"), "oyun kapanınca lobiden çıkıldı")
+	# Katılan: davet kabul edilir -> lobiye girer -> kodu okur -> aracıya bağlanır
+	fake.data[lid] = {SteamLobby.CODE_KEY: "QWERTY"}
+	var seen := [false]
+	var watch := func(st): if st == Net.Status.CONNECTING and Net.is_guest(): seen[0] = true
+	Net.status_changed.connect(watch)
+	fake.join_requested.emit(lid, 7)
+	await _frames(3)
+	Net.status_changed.disconnect(watch)
+	check(seen[0], "davetle oda koduna bağlanmaya başladı")
+	Net._close()
+	fake.join_requested.emit(424242, 7)
+	await _frames(3)
+	check(not Net.active(), "olmayan lobiye davet bağlanmaz")
+	SteamLobby.steam = null
+	fake.free()

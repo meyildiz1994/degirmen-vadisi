@@ -246,3 +246,4 @@ MSG_NET_RELAY,Oda sunucusuna ulaşılamadı. Aynı ağdaki arkadaşın adresle k
 MSG_NET_NO_ROOM,Bu kodla bir oda yok. Kodu kontrol et.,No room with that code. Check the code.
 MSG_NET_FULL,Bu oda dolu.,That room is full.
 NET_WAITING_CODE_SHORT,Arkadaşın bekleniyor. Ona bu oda kodunu söyle:,Waiting for your friend. Tell them this room code:
+NET_STEAM_INVITE,Steam'den arkadaşını davet et,Invite a Steam friend
