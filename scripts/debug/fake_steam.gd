@@ -7,6 +7,7 @@ signal lobby_created(result: int, lobby_id: int)
 signal lobby_joined(lobby_id: int, permissions: int, locked: bool, response: int)
 signal join_requested(lobby_id: int, friend_id: int)
 signal lobby_data_update(success: int, lobby_id: int, member_id: int)
+signal join_game_requested(user: int, connect: String)
 
 var calls: Array = []
 var data := {}

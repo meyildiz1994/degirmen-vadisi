@@ -23,7 +23,7 @@ func _init_steam() -> void:
 	steam = Engine.get_singleton("Steam")
 	if not steam.has_method("steamInitEx"):
 		return
-	var result = steam.call("steamInitEx", STEAM_APP_ID, true)
+	var result = steam.call("steamInitEx", STEAM_APP_ID, true)  # true: geri çağrılar kendiliğinden işlenir
 	steam_ready = typeof(result) == TYPE_DICTIONARY and int(result.get("status", 1)) == 0
 	if not steam_ready:
 		push_warning("PlatformServices: Steam başlatılamadı, devre dışı.")
@@ -102,7 +102,3 @@ func vibrate(ms: int = 30) -> void:
 	if OS.has_feature("mobile"):
 		Input.vibrate_handheld(ms)
 
-
-func _process(_delta: float) -> void:
-	if steam_ready:
-		steam.call("run_callbacks")

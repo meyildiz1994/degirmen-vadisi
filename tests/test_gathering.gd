@@ -724,6 +724,13 @@ func _test_steam_lobby() -> void:
 	Net.status_changed.disconnect(watch)
 	check(seen[0], "davetle oda koduna bağlanmaya başladı")
 	Net._close()
+	seen[0] = false
+	Net.status_changed.connect(watch)
+	fake.join_game_requested.emit(7, "+connect_lobby %d" % lid)
+	await _frames(3)
+	Net.status_changed.disconnect(watch)
+	check(seen[0], "arkadaş listesinden 'Oyuna katıl' da bağlanıyor")
+	Net._close()
 	fake.join_requested.emit(424242, 7)
 	await _frames(3)
 	check(not Net.active(), "olmayan lobiye davet bağlanmaz")

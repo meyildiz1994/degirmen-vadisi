@@ -29,7 +29,8 @@ func _ready() -> void:
 func bind(s: Object) -> void:
 	steam = s
 	for pair in [["lobby_created", _on_lobby_created], ["lobby_joined", _on_lobby_joined],
-			["join_requested", _on_join_requested], ["lobby_data_update", _on_lobby_data_update]]:
+			["join_requested", _on_join_requested], ["lobby_data_update", _on_lobby_data_update],
+			["join_game_requested", _on_join_game_requested]]:
 		if steam.has_signal(pair[0]) and not steam.is_connected(pair[0], pair[1]):
 			steam.connect(pair[0], pair[1])
 	_check_command_line.call_deferred()
@@ -89,6 +90,14 @@ func _leave_lobby() -> void:
 # --- Katılan -----------------------------------------------------------------
 func _on_join_requested(id: int, _friend: int) -> void:
 	join_lobby(id)
+
+
+## Arkadaş listesinde "Oyuna katıl" (rich presence "connect" dizesi).
+func _on_join_game_requested(_friend: int, connect: String) -> void:
+	var parts := connect.split(" ", false)
+	var i := parts.find("+connect_lobby")
+	if i >= 0 and i + 1 < parts.size() and parts[i + 1].is_valid_int():
+		join_lobby(parts[i + 1].to_int())
 
 
 func join_lobby(id: int) -> void:
