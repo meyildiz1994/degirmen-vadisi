@@ -225,3 +225,19 @@ NAME_FLOOD,Sel Suyu,Flood Water
 MSG_INTRO_RODENT,"Kemirgenler! Ahşap parçaları kemiriyorlar. Vurunca kaçarlar ama geri dönerler.","Rodents! They gnaw wooden parts. Hit them and they run, but they come back."
 MSG_INTRO_SPIRIT,"Bir orman ruhu! Uzaktan sarmaşık salıp bütün yapıyı sarıyor. Vurdukça ışınlanır, peşini bırakma.","A forest spirit! It sends vines over a whole structure. It blinks away when hit: keep after it."
 MSG_INTRO_FLOOD,"Sel geliyor! Dere boyunca akıp köprüyü ve çarkı döver. Vurdukça küçülür.","A flood is coming! It rushes down the stream and pounds the bridge and wheel. Each hit shrinks it."
+NET_HOST,Oyun aç (arkadaşın sana katılsın),Host a game (your friend joins you)
+NET_JOIN,Katıl,Join
+NET_LEAVE,Çevrimiçi oyundan ayrıl,Leave online game
+NET_ADDRESS_HINT,Arkadaşının adresi,Friend's address
+NET_HELP,Arkadaşın oyun açsın ve adresini sana söylesin.,Ask your friend to host and tell you their address.
+NET_WAITING,Arkadaşın bekleniyor. Adresin: %s,Waiting for your friend. Your address: %s
+NET_CONNECTING,Bağlanıyor…,Connecting…
+NET_ONLINE,Arkadaşınla bağlısın.,Connected with your friend.
+MSG_NET_JOINED,Arkadaşın vadiye geldi! Heybe ortak.,Your friend arrived in the valley! The bag is shared.
+MSG_NET_LEFT,Arkadaşın vadiden ayrıldı.,Your friend left the valley.
+MSG_NET_FAILED,Bağlanılamadı. Adresi ve aynı ağda olduğunuzu kontrol et.,Couldn't connect. Check the address and that you are on the same network.
+MSG_NET_LOST,Bağlantı koptu. Kendi vadine döndün.,Connection lost. You are back in your own valley.
+MSG_NET_PORT,Oyun açılamadı: bağlantı noktası kullanımda.,Couldn't host: the port is in use.
+MSG_NET_VERSION,Arkadaşının oyun sürümü farklı.,Your friend has a different game version.
+MSG_NET_ADDRESS,Önce arkadaşının adresini yaz.,Type your friend's address first.
+NET_TITLE,Çevrimiçi,Online

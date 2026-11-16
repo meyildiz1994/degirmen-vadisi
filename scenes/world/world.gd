@@ -59,6 +59,7 @@ func _ready() -> void:
 	tutorial.setup(hud, gather_world, workshop.interactable, player, bridge, mill.interactable, iron, mill)
 	hud.quest_marker.tutorial = tutorial
 	AudioManager.play_music("music_explore")
+	Net.attach(self)
 	if ScreenshotCapture.requested():
 		add_child(ScreenshotCapture.new())
 

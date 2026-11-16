@@ -27,6 +27,8 @@ func _ready() -> void:
 ## Zamanla çatlayan yapılarda: tamamlanmış ve zayıf parçalıysa çalışma süresini say.
 func _process(delta: float) -> void:
 	var limit := Repair.crack_after_seconds(site_id)
+	if Net.is_guest():
+		return  # çevrimiçi katılan: çatlamaları ev sahibi bildirir
 	if limit <= 0.0 or not is_complete() or not Repair.has_weak(state) or get_tree().paused:
 		return
 	state["crossings"] = float(state.get("crossings", 0.0)) + delta
@@ -132,6 +134,42 @@ func attack_points() -> Array:
 			out.append((c as Interactable).global_position)
 	if out.is_empty():
 		out.append(global_position)
+	return out
+
+
+# --- Çevrimiçi ----------------------------------------------------------------------
+## Karşı taraftan gelen durumu uygula. Parça takılıp çatladıysa görünüm güncellenir;
+## yalnızca aşınma değiştiyse (dalga sırasında sık) görünüme dokunulmaz.
+func net_apply(st: Dictionary) -> void:
+	var was_complete := is_complete()
+	var before := _slot_shape()
+	var old_cracked := []
+	for id: String in state.get("slots", {}):
+		if Repair.is_cracked(state, id):
+			old_cracked.append(id)
+	state = st.duplicate(true)
+	var now_shape := _slot_shape()
+	if now_shape != before:
+		var new_cracks := []
+		for id: String in state.get("slots", {}):
+			if Repair.is_cracked(state, id) and not old_cracked.has(id):
+				new_cracks.append(id)
+		if not new_cracks.is_empty():
+			crack_cause = "ink"
+			_on_cracked(new_cracks)
+		else:
+			_apply_visuals(true)
+	state_changed.emit()
+	if not was_complete and is_complete():
+		_on_completed()
+		completed.emit()
+
+
+func _slot_shape() -> String:
+	var out := ""
+	for id: String in state.get("slots", {}):
+		var ss := Repair.slot_state(state, id)
+		out += "%s=%s/%s;" % [id, str(ss.get("part", "")), str(Repair.is_cracked(state, id))]
 	return out
 
 

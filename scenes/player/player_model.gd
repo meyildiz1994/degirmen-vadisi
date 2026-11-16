@@ -45,6 +45,17 @@ var _crouch_v := 0.0
 ## Kıyafet renkleri (2. oyuncu farklı renkte giyinir). _ready'den önce ayarlanır.
 var tunic := Palette.TUNIC
 var scarf := Palette.SCARF
+var _body_mi: MeshInstance3D
+var _arm_mi: MeshInstance3D
+
+
+## Sahnedeyken kıyafet rengini değiştir (çevrimiçi katılan oyuncu yeşil giyinir).
+func recolor(t: Color, s: Color) -> void:
+	tunic = t
+	scarf = s
+	if _body_mi != null:
+		_body_mi.mesh = _body_mesh()
+		_arm_mi.mesh = _arm_mesh()
 
 
 func _ready() -> void:
@@ -57,6 +68,7 @@ func _ready() -> void:
 	_rig.position = Vector3(0, HIP_Y, 0)
 	add_child(_rig)
 	var body := MeshInstance3D.new()
+	_body_mi = body
 	body.mesh = _body_mesh()
 	body.position = Vector3(0, -HIP_Y, 0)
 	body.material_override = WatercolorMaterials.vertex_colored(true)
@@ -66,6 +78,7 @@ func _ready() -> void:
 	arm_pivot.position = Vector3(0.31, 1.16 - HIP_Y, 0)
 	_rig.add_child(arm_pivot)
 	var arm := MeshInstance3D.new()
+	_arm_mi = arm
 	arm.mesh = _arm_mesh()
 	arm.material_override = WatercolorMaterials.vertex_colored(true)
 	arm_pivot.add_child(arm)

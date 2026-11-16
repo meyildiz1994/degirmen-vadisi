@@ -12,6 +12,8 @@ signal part_broken(site: RepairSite, slot_id: String)
 signal site_attacked(site: RepairSite)
 ## Bir düşman türü oyunda ilk kez göründü (tanıtım kartı için).
 signal enemy_introduced(kind: int)
+## Bir düşman dağıtıldı (çevrimiçi: katılan tarafta da dağılsın).
+signal enemy_died(b: ValleyEnemy)
 
 enum Phase { DORMANT, CALM, WARNING, WAVE }
 
@@ -42,6 +44,10 @@ var _attack_note := {}
 var _sun_base := -1.0
 ## Daha önce görülmüş düşman türleri (kayıtlı).
 var seen: Array = []
+## Çevrimiçi katılan tarafta: dalgaları ev sahibi yönetir, burası yalnızca kopyaları tutar.
+var mirror := false
+var _next_id := 1
+var _by_net := {}
 
 
 func setup(site_list: Array, gather_fx: GatherFx, fin: Node = null, atmo: Node3D = null) -> void:
@@ -120,6 +126,9 @@ static func _ink_composition(wave_no: int, repaired: int, player_count: int) -> 
 
 
 func _physics_process(delta: float) -> void:
+	if mirror:
+		_fade_puddles(delta)
+		return
 	if not GameState.enemies_enabled:
 		if not blots.is_empty() or phase == Phase.WAVE or phase == Phase.WARNING:
 			_calm_down()
@@ -213,7 +222,9 @@ const FLOOD_START_Z := -17.0
 
 func _spawn(kind: int) -> ValleyEnemy:
 	var b := ValleyEnemy.new().setup(kind, self)
-	b.name = "Enemy%d" % randi()
+	b.net_id = _next_id
+	_next_id += 1
+	b.name = "Enemy%d" % b.net_id
 	var p: Vector3
 	if kind == ValleyEnemy.Kind.FLOOD:
 		p = Vector3(ValleyShape.river_x(FLOOD_START_Z), ValleyShape.water_y(FLOOD_START_Z), FLOOD_START_Z)
@@ -319,6 +330,8 @@ func on_hit(b: ValleyEnemy) -> void:
 
 func on_died(b: ValleyEnemy) -> void:
 	blots.erase(b)
+	_by_net.erase(b.net_id)
+	enemy_died.emit(b)
 	fx.burst(b.fx_kind(), b.global_position + Vector3(0, b.size * 0.5, 0), Vector3.UP, 2.2 if b.size > 0.5 else 1.5)
 	if b.kind in [ValleyEnemy.Kind.SMALL, ValleyEnemy.Kind.BIG]:
 		splat(b.global_position, b.size * 2.6)
@@ -395,6 +408,68 @@ func _dim(on: bool) -> void:
 		_sun_base = sun.light_energy
 	var t := create_tween()
 	t.tween_property(sun, "light_energy", _sun_base * (0.72 if on else 1.0), 2.5)
+
+
+# --- Çevrimiçi ----------------------------------------------------------------------
+## Ev sahibi: dalga durumu ve tüm düşmanların özeti.
+func net_pack() -> Array:
+	var list := []
+	for b in blots:
+		if is_instance_valid(b) and b.alive():
+			list.append(b.net_pack())
+	return [phase, wave, timer, list]
+
+
+## Katılan: özete göre kopyaları oluştur, taşı, artık olmayanları kaldır.
+func apply_net(a: Array) -> void:
+	if a.size() < 4:
+		return
+	phase = int(a[0])
+	wave = int(a[1])
+	timer = float(a[2])
+	var present := {}
+	for e: Array in a[3]:
+		var id := int(e[0])
+		present[id] = true
+		var b: ValleyEnemy = _by_net.get(id)
+		if b == null or not is_instance_valid(b):
+			b = ValleyEnemy.new().setup(int(e[1]), self)
+			b.puppet = true
+			b.net_id = id
+			b.name = "Enemy%d" % id
+			add_child(b)
+			b.global_position = Vector3(e[2], e[3], e[4])
+			b.rotation.y = float(e[5])
+			blots.append(b)
+			_by_net[id] = b
+			fx.burst(b.fx_kind(), b.global_position + Vector3(0, 0.3, 0), Vector3.UP, 1.2)
+		b.apply_net(e)
+	for id in _by_net.keys():
+		if not present.has(id):
+			var b: ValleyEnemy = _by_net[id]
+			_by_net.erase(id)
+			if is_instance_valid(b) and b.alive():
+				# Sel vadiden çıktı ya da ayar kapandı: sessizce kaybolur.
+				blots.erase(b)
+				b.queue_free()
+
+
+func net_find(id: int) -> ValleyEnemy:
+	for b in blots:
+		if is_instance_valid(b) and b.net_id == id:
+			return b
+	return null
+
+
+## Katılan: ev sahibinde dağılan düşman burada da dağılsın.
+func net_died(id: int) -> void:
+	var b: ValleyEnemy = _by_net.get(id)
+	if b != null and is_instance_valid(b) and b.alive():
+		b._die()
+
+
+func net_dim(on: bool) -> void:
+	_dim(on)
 
 
 # --- Kayıt ---------------------------------------------------------------------------

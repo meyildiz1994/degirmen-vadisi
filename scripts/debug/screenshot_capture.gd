@@ -48,7 +48,22 @@ func _ready() -> void:
 		var hud := get_parent().get_node_or_null("HUD")
 		if hud:
 			hud.show_toast(str(_args["toast"]), 30.0)
+	# Çevrimiçi deneme: --net_host=1 (ev sahibi) / --net_join=127.0.0.1 (katılan).
+	if _args.has("net_host") and not Net.active():
+		Net.host()
+	if _args.has("net_join") and not Net.auto_join_done:
+		Net.auto_join_done = true
+		Net.join(str(_args["net_join"]))
+		_net_timeout()
+		return   # bağlanınca vadi ev sahibinin kaydıyla yeniden kurulur; çekim orada
 	_capture.call_deferred()
+
+
+func _net_timeout() -> void:
+	await get_tree().create_timer(float(_args.get("net_timeout", "60"))).timeout
+	if not Net.has_partner():
+		print("NETPROBE timeout status=%d" % Net.status)
+		get_tree().quit(2)
 
 
 func _capture() -> void:
@@ -62,15 +77,59 @@ func _capture() -> void:
 		if hud:
 			hud.set_quest_log_open(true)
 	await _gather_scenario()
+	if (_args.has("net_host") and not _args.has("net_alone")) or _args.has("net_join"):
+		await _net_scenario()
 	var frames := int(_args.get("frames", "90"))
 	for i in frames:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
+	if Net.active():
+		_net_probe()
 	var img := get_viewport().get_texture().get_image()
 	var path := str(_args["screenshot"])
 	var err := img.save_png(path)
 	print("ScreenshotCapture: %s -> %s (%d)" % [path, ProjectSettings.globalize_path(path), err])
 	get_tree().quit()
+
+
+## Arkadaş gelene kadar bekle; ev sahibi isterse hemen bir dalga başlatır (--net_wave=1),
+## katılan isterse en yakın düşmana birkaç kez vurur (--net_attack=N).
+func _net_scenario() -> void:
+	if _args.has("net_join"):
+		_net_timeout()
+	while not Net.has_partner():
+		await get_tree().process_frame
+	var world := get_parent()
+	if _args.has("net_wave") and Net.is_host():
+		var d: EnemyDirector = world.director
+		d.phase = EnemyDirector.Phase.CALM
+		d.timer = 0.1
+	if _args.has("net_wait"):
+		await get_tree().create_timer(float(_args["net_wait"])).timeout
+	if _args.has("net_attack"):
+		var p: Player = world.player
+		for i in int(_args["net_attack"]):
+			var best: ValleyEnemy = null
+			for b in world.director.blots:
+				if is_instance_valid(b) and b.alive() and (best == null or b.global_position.distance_to(p.global_position) < best.global_position.distance_to(p.global_position)):
+					best = b
+			if best != null:
+				p._attack_cd = 0.0
+				p.try_attack(best)
+			await get_tree().create_timer(0.5).timeout
+
+
+func _net_probe() -> void:
+	var world := get_parent()
+	var r := Net.remote
+	var hp := []
+	for b in world.director.blots:
+		if is_instance_valid(b):
+			hp.append("%d:%s:%.1f" % [b.net_id, ValleyEnemy.Kind.keys()[b.kind], b.hp])
+	print("NETPROBE role=%s partner=%s remote=%s enemies=%d phase=%d wave=%d hp=%s oak=%d tools=%d bridge=%s" % [
+		Net.Role.keys()[Net.role], Net.has_partner(), str(r.global_position.snapped(Vector3.ONE * 0.1)) if r else "-",
+		world.director.blots.size(), world.director.phase, world.director.wave, ",".join(hp),
+		GameState.inventory.count("oak"), GameState.inventory.tools.size(), world.bridge.is_complete()])
 
 
 func _gather_scenario() -> void:

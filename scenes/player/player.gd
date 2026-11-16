@@ -8,6 +8,8 @@ signal interacted_with(target: Interactable)
 signal health_changed(health: int)
 signal downed_changed(downed: bool)
 signal attacked(target: Node3D)
+## Alet ya da yumruk savruldu (çevrimiçi: karşı tarafta da aynı hareket oynatılır).
+signal swung(sweet: bool)
 
 const MAX_HEALTH := 5
 const DOWNED_SECONDS := 9.0       ## yalnızken bu kadar sonra atölyede kendine gelir
@@ -61,6 +63,14 @@ var _attack_cd := 0.0
 var _knock := Vector3.ZERO
 var _invuln := 0.0
 var _focus_live := false
+## Çevrimiçi: bu karakteri karşı taraftaki oyuncu oynuyor. Girdi, hareket ve kamera
+## yok; konum, yön, elindeki alet, can ve baygınlık ağdan gelir (apply_net).
+var net_remote := false
+## Arkadaş çevrimiçi: herkesin kendi kamerası var, ip (mesafe sınırı) yok.
+var partner_online := false
+var _net_pos := Vector3.INF
+var _net_yaw := 0.0
+var _held := ["", "stone", 0]
 
 
 func _ready() -> void:
@@ -96,6 +106,9 @@ func _drop_freed_focus() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if net_remote:
+		_net_follow(delta)
+		return
 	_drop_freed_focus()
 	_update_camera_input(delta)
 	_update_movement(delta)
@@ -104,10 +117,13 @@ func _physics_process(delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	if net_remote:
+		_animate(delta)
+		return
 	_drop_freed_focus()
 	var target := global_position + Vector3(0, 1.45, 0)
 	var arm := 4.3
-	if partner != null and index == 0:
+	if partner != null and index == 0 and not partner_online:
 		# İki kişilik: kamera ikisinin ortasına bakar, aradaki mesafe büyüdükçe geri çekilir.
 		target = (global_position + partner.global_position) * 0.5 + Vector3(0, 1.45, 0)
 		arm = clampf(4.3 + global_position.distance_to(partner.global_position) * 0.55, 4.3, 12.0)
@@ -134,7 +150,7 @@ func _update_movement(delta: float) -> void:
 	var dir := Basis(Vector3.UP, yaw) * Vector3(input.x, 0, input.y)
 	if dir.length() > 1.0:
 		dir = dir.normalized()
-	if partner != null and not partner.downed:
+	if partner != null and not partner.downed and not partner_online:
 		# İp: arkadaştan fazla uzaklaşan yön kesilir (ikisi de ekranda kalsın).
 		var away := global_position - partner.global_position
 		away.y = 0.0
@@ -165,7 +181,7 @@ func _animate(delta: float) -> void:
 	var speed := Vector2(velocity.x, velocity.z).length()
 	var before := _walk_phase
 	_walk_phase += delta * speed * 2.6
-	if is_on_floor() and speed > 0.8 and floori(before / PI) != floori(_walk_phase / PI):
+	if (is_on_floor() or net_remote) and speed > 0.8 and floori(before / PI) != floori(_walk_phase / PI):
 		_footstep()
 	if gather.active():
 		model.set_windup(gather.ring_phase())
@@ -235,7 +251,7 @@ func _hovered_target() -> Interactable:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not input_enabled or downed:
+	if not input_enabled or downed or net_remote:
 		return
 	var click := pinput.is_click_interact(event)
 	if not pinput.is_interact_event(event) and not click:
@@ -264,6 +280,9 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Elde ne var: oturumdaki alet, yoksa odaktaki kaynağın istediği en iyi alet.
 ## Böylece oyuncu bir ağaca yaklaşınca baltasını eline alır ("baltam var" görünür).
 func _update_held() -> void:
+	if net_remote:
+		model.set_held_tool(str(_held[0]), str(_held[1]), int(_held[2]))
+		return
 	var t: ToolItem = null
 	if gather.active():
 		t = gather.tool
@@ -273,9 +292,10 @@ func _update_held() -> void:
 		var g := focus as Gatherable
 		t = GameState.inventory.best_tool(g.tool_kind(), g.resource_id)
 	if t == null:
-		model.set_held_tool("")
+		_held = ["", "stone", 0]
 	else:
-		model.set_held_tool(t.kind, t.head, ItemMemory.wear_level(t))
+		_held = [t.kind, t.head, ItemMemory.wear_level(t)]
+	model.set_held_tool(str(_held[0]), str(_held[1]), int(_held[2]))
 
 
 func set_held_tool(_kind: String) -> void:
@@ -284,7 +304,10 @@ func set_held_tool(_kind: String) -> void:
 
 func play_swing(sweet := false) -> void:
 	model.strike(sweet)
+	if net_remote:
+		return
 	_impact = 0.16 if sweet else 0.11
+	swung.emit(sweet)
 
 
 var _impact := 0.0
@@ -365,6 +388,12 @@ func try_attack(blot: ValleyEnemy) -> bool:
 func take_damage(amount: int, from: Vector3) -> void:
 	if downed or _invuln > 0.0 or amount <= 0:
 		return
+	if net_remote:
+		# Ev sahibinin düşmanı katılanın karakterine vurdu: asıl karakterin sahibine ilet.
+		_invuln = 0.6
+		model.hurt()
+		Net.send_hurt(amount, from)
+		return
 	health = maxi(health - amount, 0)
 	_since_hurt = 0.0
 	_invuln = 0.6
@@ -441,6 +470,9 @@ func _wake_at_home() -> void:
 
 
 func heal_full() -> void:
+	if net_remote:
+		Net.send_event("heal", [])
+		return
 	health = MAX_HEALTH
 	health_changed.emit(health)
 
@@ -460,3 +492,46 @@ func load_state(data: Dictionary) -> void:
 		global_position = Vector3(p.x, p.y + 0.2, p.z)
 		yaw = float(p.get("yaw", yaw))
 		camera_rig.global_position = global_position + Vector3(0, 1.45, 0)
+
+
+# --- Çevrimiçi ------------------------------------------------------------------------
+## Ağa giden özet: konum, yön, elindeki alet, can, baygınlık, kaldırılma ilerlemesi.
+func net_state() -> Array:
+	var p := global_position
+	return [p.x, p.y, p.z, model.rotation.y, _held[0], _held[1], _held[2], health, downed, revive]
+
+
+func apply_net(a: Array) -> void:
+	if a.size() < 10:
+		return
+	var first := _net_pos == Vector3.INF
+	_net_pos = Vector3(a[0], a[1], a[2])
+	_net_yaw = float(a[3])
+	_held = [str(a[4]), str(a[5]), int(a[6])]
+	if first:
+		global_position = _net_pos
+		model.rotation.y = _net_yaw
+	var h := int(a[7])
+	if h != health:
+		if h < health:
+			model.hurt()
+		health = h
+		health_changed.emit(health)
+	revive = float(a[9])
+	var d := bool(a[8])
+	if d != downed:
+		downed = d
+		downed_changed.emit(d)
+
+
+func _net_follow(delta: float) -> void:
+	_invuln = maxf(_invuln - delta, 0.0)
+	if _net_pos == Vector3.INF:
+		return
+	var before := global_position
+	if before.distance_to(_net_pos) > 6.0:
+		global_position = _net_pos  # ışınlandı (atölyede uyandı)
+	else:
+		global_position = before.lerp(_net_pos, clampf(delta * 12.0, 0.0, 1.0))
+	velocity = (global_position - before) / maxf(delta, 0.001)
+	model.rotation.y = lerp_angle(model.rotation.y, _net_yaw, clampf(delta * 14.0, 0.0, 1.0))

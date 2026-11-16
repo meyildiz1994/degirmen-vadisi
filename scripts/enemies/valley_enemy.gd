@@ -75,6 +75,12 @@ var _body: MeshInstance3D
 var _eyes: Node3D
 var _tail: Node3D
 var _push_cd := {}
+## Çevrimiçi: ev sahibindeki düşmanın kopyası (katılan tarafta). Kendi kararını vermez,
+## konumu/canı ağdan gelir; vuruşlar ev sahibine iletilir.
+var puppet := false
+var net_id := 0
+var net_target := Vector3.INF
+var net_ry := 0.0
 
 
 func setup(k: int, dir: Node) -> ValleyEnemy:
@@ -351,6 +357,9 @@ func _physics_process(delta: float) -> void:
 	_hurt = maxf(_hurt - delta * 4.0, 0.0)
 	if state == State.DYING:
 		return
+	if puppet:
+		_puppet_step(delta)
+		return
 	if kind == Kind.FLOOD:
 		_flood_step(delta)
 		return
@@ -550,6 +559,11 @@ func _lunge() -> void:
 func take_hit(amount: float, by: Node3D) -> void:
 	if not alive():
 		return
+	if puppet:
+		_hurt = 1.0
+		director.on_hit(self)
+		Net.send_enemy_hit(net_id, amount)
+		return
 	hp -= amount
 	_hurt = 1.0
 	var away := global_position - by.global_position
@@ -576,6 +590,39 @@ func take_hit(amount: float, by: Node3D) -> void:
 			else:
 				state = State.FLEE
 				_flee_t = 0.5
+
+
+## Çevrimiçi kopya: ev sahibinin bildirdiği yere süzülür.
+func _puppet_step(delta: float) -> void:
+	if net_target == Vector3.INF:
+		return
+	var before := global_position
+	if before.distance_to(net_target) > 4.0:
+		global_position = net_target   # ruh ışınlandı
+		director.fx.burst(fx_kind(), net_target + Vector3(0, size, 0), Vector3.UP, 1.0)
+	else:
+		global_position = before.lerp(net_target, clampf(delta * 10.0, 0.0, 1.0))
+	rotation.y = lerp_angle(rotation.y, net_ry, clampf(delta * 10.0, 0.0, 1.0))
+	var moved := Vector2(global_position.x - before.x, global_position.z - before.z).length()
+	_animate(delta, moved / maxf(delta, 0.001))
+
+
+## Ağa giden özet.
+func net_pack() -> Array:
+	var p := global_position
+	return [net_id, kind, p.x, p.y, p.z, rotation.y, hp, state]
+
+
+func apply_net(e: Array) -> void:
+	net_target = Vector3(e[2], e[3], e[4])
+	net_ry = float(e[5])
+	var h := float(e[6])
+	if h < hp:
+		_hurt = 1.0
+	hp = h
+	state = int(e[7]) if int(e[7]) != State.DYING else state
+	if net_target != Vector3.INF and global_position == Vector3.ZERO:
+		global_position = net_target
 
 
 ## Orman ruhu vurulunca yapraklar arasında birkaç metre ötede belirir.

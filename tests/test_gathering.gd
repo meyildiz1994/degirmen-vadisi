@@ -162,6 +162,7 @@ func _run() -> void:
 	await _test_mouse(player)
 	await _test_polish(world, player)
 	await _test_combat(world, player)
+	await _test_net(world, player)
 	# Ritim kapalı: basılı tutunca vurur
 	gs.set_rhythm_hits(false)
 	print("\nSonuç: %s (%d hata)" % ["BAŞARILI" if _fails == 0 else "BAŞARISIZ", _fails])
@@ -620,3 +621,76 @@ func _test_combat(world: Node, player: Player) -> void:
 	await get_tree().physics_frame
 	check(d.blots.is_empty() and d.phase != EnemyDirector.Phase.WAVE, "ayardan kapatınca lekeler gider (%d, %d, %s)" % [d.blots.size(), d.phase, get_tree().paused])
 	gs.set_enemies_enabled(true)
+
+
+## Çevrimiçi: ağa giden özetler aynı durumu karşı tarafta kurar (bağlantısız sınama).
+func _test_net(world: Node, player: Player) -> void:
+	print("== çevrimiçi özetler")
+	var d: EnemyDirector = world.director
+	GameState.set_enemies_enabled(true)
+	await _frames(2)
+	d.phase = EnemyDirector.Phase.WAVE
+	d._queue = [0]
+	var e1 := d._spawn(ValleyEnemy.Kind.RODENT)
+	var e2 := d._spawn(ValleyEnemy.Kind.SPIRIT)
+	check(e1.net_id != e2.net_id and e1.net_id > 0, "düşmanların ağ kimliği var")
+	var pack := d.net_pack()
+	# Katılan tarafı aynı sahnede ikinci bir yöneticiyle taklit et
+	var mirror := EnemyDirector.new()
+	world.add_child(mirror)
+	mirror.setup([world.bridge, world.mill.wall, world.mill.wheel], world.gather_world.fx)
+	mirror.mirror = true
+	mirror.apply_net(pack)
+	check(mirror.blots.size() == pack[3].size() and mirror.blots.all(func(b): return b.puppet), "katılan tarafta kopyalar kuruldu")
+	var copy: ValleyEnemy = mirror._by_net.get(e1.net_id)
+	check(copy != null and copy.kind == ValleyEnemy.Kind.RODENT, "kopya doğru tür")
+	e1.global_position += Vector3(2, 0, 0)
+	e1.hp = 1.0
+	e1.set_physics_process(false)
+	var target := e1.global_position
+	mirror.apply_net(d.net_pack())
+	for i in 30:
+		await get_tree().physics_frame
+	check(copy.global_position.distance_to(target) < 0.3 and is_equal_approx(copy.hp, 1.0), "kopya ev sahibini izliyor")
+	mirror.net_died(e2.net_id)
+	await _frames(2)
+	check(not mirror.blots.any(func(b): return is_instance_valid(b) and b.net_id == e2.net_id), "dağılan düşman katılanda da dağıldı")
+	var pack2 := d.net_pack()
+	pack2[3] = []
+	mirror.apply_net(pack2)
+	await _frames(2)
+	check(mirror.blots.is_empty(), "artık olmayan kopya kaldırıldı")
+	mirror.queue_free()
+	for b in d.blots.duplicate():
+		b.queue_free()
+	d.blots.clear()
+	d._calm_down()
+	# Yapı durumu: karşı tarafın taktığı parça buraya da takılır
+	var bridge: RepairSite = world.bridge
+	var st := bridge.state.duplicate(true)
+	var slot: String = bridge.damageable_slots()[0]
+	Repair.erode(st, "bridge", slot, 99999.0)
+	var got_crack := [false]
+	var cb := func(_ids): got_crack[0] = true
+	bridge.cracked.connect(cb)
+	bridge.net_apply(st)
+	bridge.cracked.disconnect(cb)
+	check(Repair.is_cracked(bridge.state, slot) and not bridge.is_complete(), "karşıdaki çatlak buraya geldi")
+	# Oyuncu özeti
+	var ghost: Player = preload("res://scenes/player/player.tscn").instantiate()
+	ghost.index = 1
+	ghost.net_remote = true
+	world.add_child(ghost)
+	player.health = 3
+	ghost.apply_net(player.net_state())
+	check(ghost.health == 3 and ghost.global_position.distance_to(player.global_position) < 0.01, "karakter özeti konum ve canı taşıyor")
+	var moved := player.net_state()
+	moved[0] = float(moved[0]) + 3.0
+	moved[8] = true
+	ghost.apply_net(moved)
+	for i in 30:
+		await get_tree().physics_frame
+	check(ghost.downed and absf(ghost.global_position.x - float(moved[0])) < 0.2, "uzaktaki karakter yürüyüp sersemledi")
+	ghost.queue_free()
+	player.heal_full()
+	check(Net.local_address() == "" or Net.local_address().contains("."), "yerel adres okunuyor (%s)" % Net.local_address())

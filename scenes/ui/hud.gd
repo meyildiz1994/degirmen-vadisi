@@ -44,6 +44,13 @@ var coop: CoopManager
 var coop_button: Button
 var enemies_button: Button
 var _extra_rings := {}
+## Duraklatma menüsü açık mı (çevrimiçide ağaç durmadığı için ayrı tutulur).
+var menu_open := false
+var net_host_button: Button
+var net_join_button: Button
+var net_address: LineEdit
+var net_join_row: HBoxContainer
+var net_status: Label
 
 
 func _ready() -> void:
@@ -90,6 +97,7 @@ func _build_settings_column() -> void:
 	volume_settings = VolumeSettings.new()
 	volume_settings.alignment = BoxContainer.ALIGNMENT_CENTER
 	cols.add_child(volume_settings)
+	_build_net_ui(volume_settings)
 	_fit_pause_panel.call_deferred()
 
 
@@ -138,6 +146,116 @@ func _build_combat_ui() -> void:
 	vbox.move_child(enemies_button, coop_button.get_index() + 1)
 	enemies_button.pressed.connect(func(): AudioManager.play_ui("ui_click"); GameState.set_enemies_enabled(not GameState.enemies_enabled))
 	GameState.enemies_changed.connect(func(_e): _refresh_buttons())
+
+
+## Çevrimiçi iki kişilik: [Oyun aç] ya da [adres][Katıl]; altında durum satırı.
+func _build_net_ui(vbox: VBoxContainer) -> void:
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(0, 26)
+	vbox.add_child(gap)
+	var title := Label.new()
+	title.name = "NetTitle"
+	title.text = "NET_TITLE"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 30)
+	vbox.add_child(title)
+	net_host_button = Button.new()
+	net_host_button.name = "NetHostButton"
+	vbox.add_child(net_host_button)
+	net_host_button.pressed.connect(_on_net_host_pressed)
+	net_join_row = HBoxContainer.new()
+	net_join_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(net_join_row)
+	net_address = LineEdit.new()
+	net_address.name = "NetAddress"
+	net_address.custom_minimum_size = Vector2(230, 0)
+	net_address.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	net_address.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_URL
+	net_address.add_theme_font_size_override("font_size", 22)
+	for st in ["normal", "focus"]:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Palette.PAPER.lightened(0.3)
+		sb.border_color = Palette.SUNSET if st == "focus" else Color(Palette.EARTH, 0.55)
+		sb.set_border_width_all(3)
+		sb.set_corner_radius_all(14)
+		sb.content_margin_left = 14
+		sb.content_margin_right = 14
+		sb.content_margin_top = 8
+		sb.content_margin_bottom = 8
+		net_address.add_theme_stylebox_override(st, sb)
+	net_address.add_theme_color_override("font_color", Palette.EARTH.darkened(0.45))
+	net_address.add_theme_color_override("font_placeholder_color", Color(Palette.EARTH, 0.6))
+	net_address.add_theme_color_override("caret_color", Palette.SUNSET)
+	net_address.text = str(SaveSystem.data.get("settings", {}).get("net_address", ""))
+	net_address.text_submitted.connect(func(_t): _on_net_join_pressed())
+	net_join_row.add_child(net_address)
+	net_join_button = Button.new()
+	net_join_button.name = "NetJoinButton"
+	net_join_row.add_child(net_join_button)
+	net_join_button.pressed.connect(_on_net_join_pressed)
+	net_status = Label.new()
+	net_status.name = "NetStatus"
+	net_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	net_status.custom_minimum_size = Vector2(300, 0)
+	net_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	net_status.add_theme_font_size_override("font_size", 17)
+	net_status.add_theme_color_override("font_color", Palette.EARTH.darkened(0.2))
+	vbox.add_child(net_status)
+	Net.status_changed.connect(func(_s): _refresh_net())
+	Net.partner_joined.connect(_refresh_net)
+	Net.partner_left.connect(_refresh_net)
+	Net.failed.connect(_on_net_failed)
+
+
+func _on_net_host_pressed() -> void:
+	AudioManager.play_ui("ui_click")
+	if Net.active():
+		Net.leave()
+	else:
+		if coop != null and coop.is_active():
+			coop.leave()
+		Net.host()
+	_refresh_net()
+
+
+func _on_net_join_pressed() -> void:
+	AudioManager.play_ui("ui_click")
+	if Net.active():
+		return
+	if coop != null and coop.is_active():
+		coop.leave()
+	SaveSystem.data["settings"]["net_address"] = net_address.text.strip_edges()
+	Net.join(net_address.text)
+	_refresh_net()
+
+
+func _on_net_failed(reason: String) -> void:
+	var key: String = {"port": "MSG_NET_PORT", "lost": "MSG_NET_LOST", "version": "MSG_NET_VERSION", "address": "MSG_NET_ADDRESS"}.get(reason, "MSG_NET_FAILED")
+	show_toast(key, 5.0)
+	_refresh_net()
+	if net_status != null:
+		net_status.text = tr(key)
+
+
+func _refresh_net() -> void:
+	if net_host_button == null:
+		return
+	net_host_button.text = tr("NET_LEAVE") if Net.active() else tr("NET_HOST")
+	net_join_button.text = tr("NET_JOIN")
+	net_address.placeholder_text = tr("NET_ADDRESS_HINT")
+	net_join_row.visible = not Net.active()
+	match Net.status:
+		Net.Status.HOSTING:
+			net_status.text = tr("NET_ONLINE") if Net.has_partner() else tr("NET_WAITING") % Net.host_address
+		Net.Status.CONNECTING, Net.Status.LOADING:
+			net_status.text = tr("NET_CONNECTING")
+		Net.Status.ONLINE:
+			net_status.text = tr("NET_ONLINE")
+		_:
+			net_status.text = tr("NET_HELP")
+	if coop_button != null:
+		coop_button.disabled = Net.active()
+	_fit_pause_panel.call_deferred()
 
 
 func bind_coop(c: CoopManager) -> void:
@@ -360,7 +478,7 @@ func _on_focus_changed(target: Interactable) -> void:
 
 
 func _refresh_hint() -> void:
-	hint_panel.visible = _focus != null and not get_tree().paused
+	hint_panel.visible = _focus != null and not menu_open
 	if _focus:
 		hint_label.text = _focus.hint_text()
 	hint_glyph.refresh()
@@ -372,6 +490,7 @@ func _refresh_texts() -> void:
 
 
 func _refresh_buttons() -> void:
+	_refresh_net()
 	quality_button.text = "%s: %s" % [tr("QUALITY"), tr(GameState.quality_name_key())]
 	language_button.text = "%s: %s" % [tr("LANGUAGE"), "Türkçe" if GameState.current_locale() == "tr" else "English"]
 	touch_button.text = tr("TOUCH_PREVIEW_ON") if InputManager.touch_preview else tr("TOUCH_PREVIEW_OFF")
@@ -403,7 +522,11 @@ func show_toast(key: String, duration := 3.5) -> void:
 
 
 func set_paused(paused: bool) -> void:
-	get_tree().paused = paused
+	menu_open = paused
+	# Çevrimiçi oyunda dünya durmaz (arkadaş oynamaya devam eder); yalnızca karakter durur.
+	get_tree().paused = paused and not Net.active()
+	if Net.active():
+		_set_players_input(not paused)
 	pause_menu.visible = paused
 	AudioManager.play_ui("panel_open" if paused else "panel_close")
 	if paused:
@@ -421,18 +544,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		inventory_panel.close_panel()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("pause"):
-		set_paused(not get_tree().paused)
+		set_paused(not menu_open)
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("quest_log") and not get_tree().paused:
+	elif event.is_action_pressed("quest_log") and not menu_open:
 		toggle_quest_log()
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("inventory") and not get_tree().paused:
+	elif event.is_action_pressed("inventory") and not menu_open:
 		toggle_inventory()
 		get_viewport().set_input_as_handled()
 
 
 func _process(_delta: float) -> void:
-	var free := not get_tree().paused and not modal_open() and not inventory_panel.is_open
+	var free := not menu_open and not modal_open() and not inventory_panel.is_open
 	look_hint.visible = InputManager.is_pointer_mode() and not InputManager.mouse_looked and free
 	# İmleç bir hedefin üstündeyse "etkileşilebilir" imlecine geç.
 	var hover := free and player != null and player.hovered != null
