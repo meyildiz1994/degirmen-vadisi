@@ -28,7 +28,7 @@ const SITE_RATE := 0.25
 const INV_RATE := 0.15
 const CONNECT_TIMEOUT := 10.0
 ## Ücretsiz barındırmada uyuyan aracı sunucu ilk bağlantıda uyanana kadar bekle.
-const RELAY_TIMEOUT := 60.0
+const RELAY_TIMEOUT := 90.0  # Render ücretsiz sunucu uykudan ~1 dk.da uyanır
 const PLAYER_SCENE := preload("res://scenes/player/player.tscn")
 
 var status := Status.OFFLINE
