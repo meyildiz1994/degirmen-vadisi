@@ -75,6 +75,7 @@ func _build_combat() -> void:
 	director.wave_warning.connect(_on_wave_warning)
 	director.wave_cleared.connect(func(_w): hud.show_toast("MSG_WAVE_CLEARED", 3.5); AudioManager.play_sfx("wave_cleared"))
 	director.part_broken.connect(_on_part_broken)
+	director.enemy_introduced.connect(_on_enemy_introduced)
 	coop = CoopManager.new()
 	coop.name = "Coop"
 	add_child(coop)
@@ -102,6 +103,16 @@ func _on_wave_warning(wave_no: int, _dir: Vector3) -> void:
 	else:
 		hud.show_toast("MSG_WAVE_WARNING", 3.0)
 		hud.hint_card.flash(["ink_blot", "arrow", "bridge"], 4.0)
+
+
+## Yeni düşman türü ilk kez göründü: kısa tanıtım (ikon kartı + metin).
+func _on_enemy_introduced(kind: int) -> void:
+	var msg: String = {ValleyEnemy.Kind.RODENT: "MSG_INTRO_RODENT", ValleyEnemy.Kind.SPIRIT: "MSG_INTRO_SPIRIT", ValleyEnemy.Kind.FLOOD: "MSG_INTRO_FLOOD"}.get(kind, "")
+	if msg == "":
+		return
+	var target := "mill" if kind == ValleyEnemy.Kind.SPIRIT else "bridge"
+	hud.show_toast(msg, 6.0)
+	hud.hint_card.flash([ValleyEnemy.ICONS[kind], "arrow", target, "axe", "arrow", ValleyEnemy.ICONS[kind]], 7.0)
 
 
 func _on_part_broken(_site: RepairSite, _slot_id: String) -> void:

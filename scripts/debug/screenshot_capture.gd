@@ -159,6 +159,8 @@ func _gather_scenario() -> void:
 		await _mill_scenario(world, player)
 	if _args.has("bridge") or _args.has("repair_open"):
 		await _bridge_scenario(world)
+	if _args.has("enemy"):
+		await _enemy_portrait(world)
 	if _args.has("coop") or _args.has("ink") or _args.has("hurt") or _args.has("warn"):
 		await _combat_scenario(world, player)
 	if _args.has("tool_memory"):
@@ -201,21 +203,21 @@ func _combat_scenario(world: Node, player: Player) -> void:
 		d.phase = EnemyDirector.Phase.WAVE
 		d.wave = maxi(d.wave, 3)
 		for k in int(n[0]):
-			var b := InkBlot.new().setup(InkBlot.Kind.SMALL, d)
+			var b := ValleyEnemy.new().setup(ValleyEnemy.Kind.SMALL, d)
 			d.add_child(b)
 			d.blots.append(b)
 			d.retarget(b)
 			b.global_position = b.goal + Vector3(randf_range(-0.6, 0.6), 0, randf_range(-0.6, 0.6))
-			b.state = InkBlot.State.GNAW
+			b.state = ValleyEnemy.State.GNAW
 		for k in (int(n[1]) if n.size() > 1 else 0):
-			var b := InkBlot.new().setup(InkBlot.Kind.BIG, d)
+			var b := ValleyEnemy.new().setup(ValleyEnemy.Kind.BIG, d)
 			d.add_child(b)
 			d.blots.append(b)
 			d.retarget(b)
 			var fwd := Basis(Vector3.UP, player.yaw) * Vector3(-1.2, 0, -2.6)
 			b.global_position = player.global_position + fwd
 			b.player_damage = 0  # poz için sabit dursun
-			b.state = InkBlot.State.FLEE
+			b.state = ValleyEnemy.State.FLEE
 			b._flee_t = 999.0
 		d._queue = [0, 0]
 	if _args.has("hurt"):
@@ -228,6 +230,71 @@ func _combat_scenario(world: Node, player: Player) -> void:
 		await get_tree().create_timer(0.6).timeout
 		target.revive = float(_args["downed"])
 		target.set_physics_process(false)
+
+
+## --enemy=small|big|rodent|spirit|flood[,N] — o türden N tane köprünün batı ucunda;
+## --enemy_cam=dx,dy,dz kamera düşmana göre (varsayılan yakın plan).
+func _enemy_portrait(world: Node) -> void:
+	var d: EnemyDirector = world.director
+	var parts := str(_args["enemy"]).split(",")
+	var kinds := {"small": ValleyEnemy.Kind.SMALL, "big": ValleyEnemy.Kind.BIG, "rodent": ValleyEnemy.Kind.RODENT, "spirit": ValleyEnemy.Kind.SPIRIT, "flood": ValleyEnemy.Kind.FLOOD}
+	var kind: int = kinds.get(parts[0], ValleyEnemy.Kind.SMALL)
+	var n := int(parts[1]) if parts.size() > 1 else 1
+	var bridge: RepairSite = world.bridge
+	var anchor: Vector3 = bridge.attack_points()[0]
+	if kind == ValleyEnemy.Kind.SPIRIT:
+		anchor = world.mill.wall.attack_points()[0]
+	d.phase = EnemyDirector.Phase.WAVE
+	d._queue = [0]
+	var focus := anchor
+	var first: ValleyEnemy = null
+	for i in n:
+		var e := d._spawn(kind)
+		if kind == ValleyEnemy.Kind.FLOOD:
+			var z := bridge.global_position.z - 5.0
+			e.global_position = Vector3(ValleyShape.river_x(z), ValleyShape.water_y(z) - 0.1, z)
+			e.speed = 0.0
+			focus = e.global_position
+		else:
+			var off := Vector3(cos(i * 2.1) * 1.1, 0, sin(i * 2.1) * 1.1) if n > 1 else Vector3.ZERO
+			e.global_position = anchor + off
+			e.goal = e.global_position
+			if kind == ValleyEnemy.Kind.SPIRIT:
+				e.site = world.mill.wall
+			e.state = ValleyEnemy.State.GNAW
+			e.player_damage = 0
+			if i == 0:
+				focus = e.global_position
+		if i == 0:
+			first = e
+	if _args.has("enemy_at"):
+		# Portre: açık bir yerde, kameraya dönük ve yerinde.
+		var at: PackedFloat64Array = str(_args["enemy_at"]).split_floats(",")
+		var i := 0
+		for e: ValleyEnemy in d.blots:
+			var p := Vector3(at[0] + (i - (n - 1) * 0.5) * 0.9, 0, at[1] + absf(i - (n - 1) * 0.5) * 0.4)
+			e.global_position = Vector3(p.x, e._ground_y(p.x, p.z), p.z)
+			e.speed = 0.0
+			e.state = ValleyEnemy.State.FLEE
+			e._flee_t = 999.0
+			e.rotation.y = deg_to_rad(float(at[2]) if at.size() > 2 else 0.0)
+			i += 1
+	for i in 8:
+		await get_tree().physics_frame
+	# Varsayılan: düşmanın yüzüne, hafif yandan ve yukarıdan bakan kamera.
+	var fwd := -first.global_transform.basis.z
+	fwd.y = 0.0
+	var dist := 5.5 if kind == ValleyEnemy.Kind.FLOOD else (3.6 if kind == ValleyEnemy.Kind.SPIRIT else 2.6)
+	var v := (fwd.normalized().rotated(Vector3.UP, 0.45) * dist) + Vector3(0, dist * 0.45, 0)
+	focus = first.global_position
+	if _args.has("enemy_cam"):
+		var a: PackedFloat64Array = str(_args["enemy_cam"]).split_floats(",")
+		v = Vector3(a[0], a[1], a[2])
+	var cam := Camera3D.new()
+	cam.fov = 50.0
+	world.add_child(cam)
+	cam.look_at_from_position(focus + v, focus + Vector3(0, 0.5, 0))
+	cam.make_current()
 
 
 ## --tool_memory=1: heybedeki ilk alet yaşlanmış, isim kazanmış, geçmişli ve aşınmış.

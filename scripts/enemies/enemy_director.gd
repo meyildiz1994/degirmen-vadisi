@@ -10,6 +10,8 @@ signal wave_started(wave: int, count: int)
 signal wave_cleared(wave: int)
 signal part_broken(site: RepairSite, slot_id: String)
 signal site_attacked(site: RepairSite)
+## Bir düşman türü oyunda ilk kez göründü (tanıtım kartı için).
+signal enemy_introduced(kind: int)
 
 enum Phase { DORMANT, CALM, WARNING, WAVE }
 
@@ -29,7 +31,7 @@ var atmosphere: Node3D
 var phase := Phase.DORMANT
 var wave := 0                 ## başlamış son dalganın numarası
 var timer := 0.0
-var blots: Array[InkBlot] = []
+var blots: Array[ValleyEnemy] = []
 var _queue: Array = []
 var _spawn_t := 0.0
 var _spawn_dir := Vector3.FORWARD
@@ -38,6 +40,8 @@ var _puddles: Array[MeshInstance3D] = []
 var _puddle_mesh: CylinderMesh
 var _attack_note := {}
 var _sun_base := -1.0
+## Daha önce görülmüş düşman türleri (kayıtlı).
+var seen: Array = []
 
 
 func setup(site_list: Array, gather_fx: GatherFx, fin: Node = null, atmo: Node3D = null) -> void:
@@ -75,8 +79,30 @@ func seconds_to_wave() -> float:
 	return timer if phase in [Phase.CALM, Phase.WARNING] else 0.0
 
 
-## Dalga içeriği: küçük ve iri leke sayısı.
-static func composition(wave_no: int, repaired: int, player_count: int) -> Dictionary:
+## Dalga içeriği: tür başına sayı. Yeni türler dalgalarla tanıtılır:
+## 1: mürekkep lekeleri, 2: kemirgenler, 3: orman ruhu ve Kara Leke, 4: sel suyu.
+static func composition(wave_no: int, repaired: int, player_count: int, river_target := true) -> Dictionary:
+	var c := _ink_composition(wave_no, repaired, player_count)
+	var rodent := 0
+	if wave_no >= 2:
+		rodent = 3 + (wave_no - 2) / 2 * 2
+	var spirit := 0
+	if wave_no >= 3:
+		spirit = 1 + (wave_no - 3) / 3
+	var flood := 0
+	if river_target and wave_no >= 4 and wave_no % 2 == 0:
+		flood = 1 + (1 if wave_no >= 8 else 0)
+	if player_count > 1:
+		rodent = ceili(rodent * 1.5)
+		if spirit > 0:
+			spirit += 1
+	c["rodent"] = mini(rodent, 9)
+	c["spirit"] = mini(spirit, 3)
+	c["flood"] = flood
+	return c
+
+
+static func _ink_composition(wave_no: int, repaired: int, player_count: int) -> Dictionary:
 	var small := 2 + wave_no + repaired
 	var big := 0
 	if wave_no >= 3:
@@ -136,12 +162,18 @@ func _warn() -> void:
 func _begin_wave() -> void:
 	wave += 1
 	phase = Phase.WAVE
-	var c := composition(wave, repaired_count(), players().size())
+	var c := composition(wave, repaired_count(), players().size(), _river_has_parts())
 	_queue.clear()
 	for i in c["small"]:
-		_queue.append(InkBlot.Kind.SMALL)
+		_queue.append(ValleyEnemy.Kind.SMALL)
 	for i in c["big"]:
-		_queue.insert(mini(2 + i * 3, _queue.size()), InkBlot.Kind.BIG)
+		_queue.insert(mini(2 + i * 3, _queue.size()), ValleyEnemy.Kind.BIG)
+	for i in c["spirit"]:
+		_queue.insert(mini(1 + i * 4, _queue.size()), ValleyEnemy.Kind.SPIRIT)
+	for i in c["rodent"]:
+		_queue.insert(mini(i / 3 * 4, _queue.size()), ValleyEnemy.Kind.RODENT)
+	for i in c["flood"]:
+		_queue.insert(mini(3 + i * 6, _queue.size()), ValleyEnemy.Kind.FLOOD)
 	_spawn_t = 0.0
 	wave_started.emit(wave, _queue.size())
 
@@ -168,24 +200,49 @@ func _calm_down() -> void:
 	timer = CALM_TIME
 
 
-func _spawn(kind: int) -> void:
-	var b := InkBlot.new().setup(kind, self)
-	b.name = "InkBlot%d" % randi()
-	var side := _spawn_dir.rotated(Vector3.UP, randf_range(-0.45, 0.45))
-	var p := side * SPAWN_RING
-	p.x = clampf(p.x, -ValleyShape.HALF_SIZE + 2.0, ValleyShape.HALF_SIZE - 2.0)
-	p.z = clampf(p.z, -ValleyShape.HALF_SIZE + 2.0, ValleyShape.HALF_SIZE - 2.0)
-	p.y = maxf(ValleyShape.height(p.x, p.z), ValleyShape.water_y(p.z))
+## Köprü ya da çarkta takılı parça var mı (sel ancak o zaman gelir).
+func _river_has_parts() -> bool:
+	for s in sites:
+		if s.site_id in ["bridge", "mill_wheel"] and not s.damageable_slots().is_empty():
+			return true
+	return false
+
+
+const FLOOD_START_Z := -17.0
+
+
+func _spawn(kind: int) -> ValleyEnemy:
+	var b := ValleyEnemy.new().setup(kind, self)
+	b.name = "Enemy%d" % randi()
+	var p: Vector3
+	if kind == ValleyEnemy.Kind.FLOOD:
+		p = Vector3(ValleyShape.river_x(FLOOD_START_Z), ValleyShape.water_y(FLOOD_START_Z), FLOOD_START_Z)
+	else:
+		var side := _spawn_dir.rotated(Vector3.UP, randf_range(-0.45, 0.45))
+		p = side * SPAWN_RING
+		p.x = clampf(p.x, -ValleyShape.HALF_SIZE + 2.0, ValleyShape.HALF_SIZE - 2.0)
+		p.z = clampf(p.z, -ValleyShape.HALF_SIZE + 2.0, ValleyShape.HALF_SIZE - 2.0)
+		p.y = maxf(ValleyShape.height(p.x, p.z), ValleyShape.water_y(p.z))
 	add_child(b)
 	b.global_position = p
 	blots.append(b)
-	fx.burst("ink", p + Vector3(0, 0.3, 0), Vector3.UP, 1.2)
-	retarget(b)
-	AudioManager.play_sfx_3d("ink_spawn", p, -4.0)
+	fx.burst(b.fx_kind(), p + Vector3(0, 0.3, 0), Vector3.UP, 1.2)
+	if kind != ValleyEnemy.Kind.FLOOD:
+		retarget(b)
+	AudioManager.play_sfx_3d(_sfx(kind, "spawn"), p, -4.0)
+	if not seen.has(kind):
+		seen.append(kind)
+		enemy_introduced.emit(kind)
+	return b
+
+
+static func _sfx(kind: int, what: String) -> String:
+	var base: String = {ValleyEnemy.Kind.RODENT: "rodent", ValleyEnemy.Kind.SPIRIT: "spirit", ValleyEnemy.Kind.FLOOD: "flood"}.get(kind, "ink")
+	return "%s_%s" % [base, what]
 
 
 ## Leke için yapı ve yuva seç: yakın olan ve az aşınmış parçası olan yapılar önde.
-func retarget(b: InkBlot) -> bool:
+func retarget(b: ValleyEnemy) -> bool:
 	var best: RepairSite = null
 	var best_score := INF
 	for s in sites:
@@ -202,10 +259,15 @@ func retarget(b: InkBlot) -> bool:
 		return false
 	b.site = best
 	var ids := best.damageable_slots()
+	if b.kind == ValleyEnemy.Kind.RODENT:
+		# Kemirgen ahşap parçayı seçer (yoksa ne bulursa).
+		var wood := ids.filter(func(id): return Crafting.part_material(str(Repair.slot_state(best.state, id)["part"])) in ValleyEnemy.WOOD_MATS)
+		if not wood.is_empty():
+			ids = wood
 	b.slot_id = ids[randi() % ids.size()]
 	var off := Vector3(randf_range(-1.0, 1.0), 0, randf_range(-1.0, 1.0)).limit_length(1.0)
 	b.goal = _nearest_point(best, b.global_position) + off
-	b.state = InkBlot.State.SEEK
+	b.state = ValleyEnemy.State.SEEK
 	return true
 
 
@@ -234,7 +296,7 @@ func nearest_player(from: Vector3, max_d: float) -> Node3D:
 
 
 ## Lekeler üst üste binmesin.
-func separation(b: InkBlot) -> Vector3:
+func separation(b: ValleyEnemy) -> Vector3:
 	var push := Vector3.ZERO
 	for o in blots:
 		if o == b or not is_instance_valid(o):
@@ -248,26 +310,34 @@ func separation(b: InkBlot) -> Vector3:
 	return push
 
 
-func on_hit(b: InkBlot) -> void:
+func on_hit(b: ValleyEnemy) -> void:
 	var dir := Vector3.UP
-	fx.burst("ink", b.global_position + Vector3(0, b.size * 0.7, 0), dir, 0.9)
-	AudioManager.play_sfx_3d("ink_hit", b.global_position)
+	fx.burst(b.fx_kind(), b.global_position + Vector3(0, b.size * 0.7, 0), dir, 0.9)
+	AudioManager.play_sfx_3d(_sfx(b.kind, "hit"), b.global_position)
 	PlatformServices.vibrate(25)
 
 
-func on_died(b: InkBlot) -> void:
+func on_died(b: ValleyEnemy) -> void:
 	blots.erase(b)
-	fx.burst("ink", b.global_position + Vector3(0, b.size * 0.5, 0), Vector3.UP, 2.2 if b.kind == InkBlot.Kind.BIG else 1.5)
-	splat(b.global_position, b.size * 2.6)
-	AudioManager.play_sfx_3d("ink_pop", b.global_position)
+	fx.burst(b.fx_kind(), b.global_position + Vector3(0, b.size * 0.5, 0), Vector3.UP, 2.2 if b.size > 0.5 else 1.5)
+	if b.kind in [ValleyEnemy.Kind.SMALL, ValleyEnemy.Kind.BIG]:
+		splat(b.global_position, b.size * 2.6)
+	elif b.kind == ValleyEnemy.Kind.SPIRIT:
+		fx.burst("sparkle", b.global_position + Vector3(0, b.size, 0), Vector3.UP, 1.0)
+	AudioManager.play_sfx_3d(_sfx(b.kind, "pop"), b.global_position)
 
 
-func on_part_broken(_b: InkBlot, site: RepairSite, slot_id: String) -> void:
+## Sel vadinin güneyinden çıkıp gitti (dağıtılmadan).
+func on_left(b: ValleyEnemy) -> void:
+	blots.erase(b)
+
+
+func on_part_broken(_b: ValleyEnemy, site: RepairSite, slot_id: String) -> void:
 	part_broken.emit(site, slot_id)
 
 
-func drip(pos: Vector3) -> void:
-	fx.burst("ink", pos, Vector3.UP, 0.35)
+func drip(pos: Vector3, kind := "ink") -> void:
+	fx.burst(kind, pos, Vector3.UP, 0.35)
 	for s in sites:
 		if pos.distance_to(_nearest_point(s, pos)) < 3.0:
 			var now := Time.get_ticks_msec()
@@ -288,7 +358,7 @@ func splat(pos: Vector3, radius: float) -> void:
 		var m := StandardMaterial3D.new()
 		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		m.albedo_color = Color(InkBlot.INK, 0.55)
+		m.albedo_color = Color(ValleyEnemy.INK, 0.55)
 		mi.material_override = m
 		add_child(mi)
 	mi.global_position = pos + Vector3(0, 0.03, 0)
@@ -335,7 +405,7 @@ func save_state(data: Dictionary) -> void:
 	if phase == Phase.WAVE or phase == Phase.WARNING:
 		p = Phase.CALM
 		t = 10.0
-	data["enemies"] = {"phase": p, "wave": wave - (1 if phase == Phase.WAVE else 0), "timer": t}
+	data["enemies"] = {"phase": p, "wave": wave - (1 if phase == Phase.WAVE else 0), "timer": t, "seen": seen.duplicate()}
 
 
 func load_state(data: Dictionary) -> void:
@@ -345,3 +415,6 @@ func load_state(data: Dictionary) -> void:
 	phase = clampi(int(e.get("phase", 0)), Phase.DORMANT, Phase.CALM)
 	wave = maxi(int(e.get("wave", 0)), 0)
 	timer = float(e.get("timer", FIRST_DELAY))
+	seen = []
+	for k in e.get("seen", []):
+		seen.append(int(k))

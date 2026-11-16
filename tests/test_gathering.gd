@@ -497,11 +497,11 @@ func _test_combat(world: Node, player: Player) -> void:
 	for i in 4:
 		await get_tree().physics_frame
 	check(d.phase == EnemyDirector.Phase.WAVE and d.blots.size() >= 1, "dalga başladı, leke sızdı")
-	var b: InkBlot = d.blots[0]
+	var b: ValleyEnemy = d.blots[0]
 	check(b.site != null and b.slot_id != "", "leke bir yapı ve parça seçti")
 	# Lekeyi yapıya taşı: parçayı aşındırsın
 	b.global_position = b.goal
-	b.state = InkBlot.State.GNAW
+	b.state = ValleyEnemy.State.GNAW
 	b.player_damage = 0
 	for i in 30:
 		await get_tree().physics_frame
@@ -561,6 +561,56 @@ func _test_combat(world: Node, player: Player) -> void:
 		if e is InputEventJoypadButton and e.device == -1:
 			restored = true
 	check(restored, "gamepad yeniden 1. oyuncunun")
+	print("== kemirgen, orman ruhu, sel")
+	check(ValleyEnemy.damage_factor(ValleyEnemy.Kind.RODENT, "beam:oak") > ValleyEnemy.damage_factor(ValleyEnemy.Kind.RODENT, "beam:stone"), "kemirgen ahşabı taştan çok kemirir")
+	var c2 := EnemyDirector.composition(2, 1, 1)
+	var c3 := EnemyDirector.composition(3, 1, 1)
+	var c4 := EnemyDirector.composition(4, 2, 1)
+	check(c2["rodent"] >= 3 and c2["spirit"] == 0, "2. dalgada kemirgenler")
+	check(c3["spirit"] >= 1, "3. dalgada orman ruhu")
+	check(c4["flood"] >= 1 and EnemyDirector.composition(4, 2, 1, false)["flood"] == 0, "4. dalgada sel (dere yapısı varsa)")
+	# Yapıları tazele
+	for site: RepairSite in d.sites:
+		for id: String in site.damageable_slots():
+			Repair.slot_state(site.state, id)["wear"] = 0.0
+	var wall: RepairSite = world.mill.wall
+	var rod := d._spawn(ValleyEnemy.Kind.RODENT)
+	check(rod.site != null and rod.slot_id != "", "kemirgen bir parça seçti")
+	var spi := d._spawn(ValleyEnemy.Kind.SPIRIT)
+	spi.site = wall
+	spi.goal = wall.attack_points()[0]
+	spi.global_position = spi.goal + Vector3(1.5, 0, 0)
+	spi.state = ValleyEnemy.State.GNAW
+	for i in 20:
+		await get_tree().physics_frame
+	var all_worn := true
+	for id: String in wall.damageable_slots():
+		if wall.slot_health(id) >= 1.0:
+			all_worn = false
+	check(all_worn, "orman ruhu yapının bütün parçalarını sarıyor")
+	var before_pos := spi.global_position
+	player._attack_cd = 0.0
+	player.try_attack(spi)
+	check(spi.alive() and spi.global_position.distance_to(before_pos) > 1.0, "vurulan ruh ışınlandı")
+	var fl := d._spawn(ValleyEnemy.Kind.FLOOD)
+	var z0 := fl.global_position.z
+	fl.global_position.z = bridge.global_position.z - 2.0
+	var bridge_before := 0.0
+	for id: String in bridge.damageable_slots():
+		bridge_before += bridge.slot_health(id)
+	for i in 30:
+		await get_tree().physics_frame
+	var bridge_after := 0.0
+	for id: String in bridge.damageable_slots():
+		bridge_after += bridge.slot_health(id)
+	check(z0 < 0.0 and fl.global_position.z > bridge.global_position.z - 2.0, "sel dere boyunca güneye akıyor")
+	check(bridge_after < bridge_before, "sel köprüyü dövüyor")
+	var fhp := fl.hp
+	player._attack_cd = 0.0
+	player.global_position = fl.global_position + Vector3(1.0, 0, 0)
+	player.try_attack(fl)
+	check(fl.hp < fhp, "sel vurulunca küçülür")
+	check(d.seen.has(ValleyEnemy.Kind.FLOOD), "görülen türler kaydediliyor")
 	print("== ayar ve kayıt")
 	var sd := {}
 	d.save_state(sd)

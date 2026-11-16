@@ -60,6 +60,7 @@ var _regen_t := 0.0
 var _attack_cd := 0.0
 var _knock := Vector3.ZERO
 var _invuln := 0.0
+var _focus_live := false
 
 
 func _ready() -> void:
@@ -79,7 +80,23 @@ func _ready() -> void:
 	add_child(gather)
 
 
+## Hedef (ör. vadiden çıkan sel ya da dağılan leke) yok olduysa bırak.
+## (Silinmiş nesne null'a eşit görünebildiği için doğrudan geçerlilik bakılır.)
+func _drop_freed_focus() -> void:
+	if not is_instance_valid(focus):
+		var had := _focus_live
+		focus = null
+		_focus_live = false
+		if had:
+			focus_changed.emit(null)
+	else:
+		_focus_live = true
+	if not is_instance_valid(hovered):
+		hovered = null
+
+
 func _physics_process(delta: float) -> void:
+	_drop_freed_focus()
 	_update_camera_input(delta)
 	_update_movement(delta)
 	_update_focus()
@@ -87,6 +104,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	_drop_freed_focus()
 	var target := global_position + Vector3(0, 1.45, 0)
 	var arm := 4.3
 	if partner != null and index == 0:
@@ -228,8 +246,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		if hovered == null:
 			return
 		target = hovered
-	if target is InkBlot and not gather.active():
-		try_attack(target as InkBlot)
+	if target is ValleyEnemy and not gather.active():
+		try_attack(target as ValleyEnemy)
 	elif gather.active():
 		gather.on_interact_pressed(gather.target)
 	elif target is Gatherable:
@@ -249,7 +267,7 @@ func _update_held() -> void:
 	var t: ToolItem = null
 	if gather.active():
 		t = gather.tool
-	elif focus is InkBlot:
+	elif focus is ValleyEnemy:
 		t = best_weapon()
 	elif focus is Gatherable and not (focus as Gatherable).is_hand():
 		var g := focus as Gatherable
@@ -329,7 +347,7 @@ static func weapon_damage(t: ToolItem) -> float:
 	return HAND_DAMAGE if t == null else 1.0 + t.effective_power() * 0.25
 
 
-func try_attack(blot: InkBlot) -> bool:
+func try_attack(blot: ValleyEnemy) -> bool:
 	if _attack_cd > 0.0 or downed or not is_instance_valid(blot) or not blot.alive():
 		return false
 	var t := best_weapon()
@@ -380,6 +398,7 @@ func _set_downed(v: bool) -> void:
 
 
 func _update_combat(delta: float) -> void:
+	_drop_freed_focus()
 	_attack_cd = maxf(_attack_cd - delta, 0.0)
 	_invuln = maxf(_invuln - delta, 0.0)
 	if downed:
@@ -399,8 +418,8 @@ func _update_combat(delta: float) -> void:
 			_wake_at_home()
 		return
 	# Basılı tutunca leke dövülmeye devam eder (dokunmatikte rahat).
-	if focus is InkBlot and input_enabled and pinput.interact_held() and not gather.active():
-		try_attack(focus as InkBlot)
+	if focus is ValleyEnemy and input_enabled and pinput.interact_held() and not gather.active():
+		try_attack(focus as ValleyEnemy)
 	_since_hurt += delta
 	if health < MAX_HEALTH and _since_hurt > REGEN_DELAY:
 		_regen_t += delta
