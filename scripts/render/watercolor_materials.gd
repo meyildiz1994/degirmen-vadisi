@@ -105,6 +105,17 @@ static func water() -> ShaderMaterial:
 	return m
 
 
+static func flood_water() -> ShaderMaterial:
+	if _cache.has("flood_water"):
+		return _cache["flood_water"]
+	var m := ShaderMaterial.new()
+	m.shader = load("res://shaders/flood_water.gdshader")
+	m.set_shader_parameter("paint_noise", paint_noise())
+	m.render_priority = 1
+	_cache["flood_water"] = m
+	return m
+
+
 static func _outlines_on() -> bool:
 	return _quality >= 1
 

@@ -31,7 +31,7 @@ const WOOD_MATS := ["oak", "pine", "reed", "branch"]
 const STATS := {
 	Kind.SMALL: [4.0, 1.75, 2.2, 0.36, 0],
 	Kind.BIG: [12.0, 1.05, 4.5, 0.66, 1],
-	Kind.RODENT: [2.0, 2.7, 3.2, 0.3, 0],
+	Kind.RODENT: [2.0, 2.7, 3.2, 0.25, 0],
 	Kind.SPIRIT: [7.0, 1.2, 1.1, 0.42, 0],
 	Kind.FLOOD: [14.0, 2.0, 7.0, 0.95, 1],
 }
@@ -157,8 +157,9 @@ func _build() -> void:
 		_:
 			_build_blot(body_kit, eye_kit)
 	_body = MeshInstance3D.new()
-	_body.mesh = body_kit.commit()
-	_body.material_override = WatercolorMaterials.vertex_colored(true)
+	_body.mesh = _wave_mesh(size) if kind == Kind.FLOOD else body_kit.commit()
+	# Sel suyu konturlu olunca taş gibi duruyor; su için kontur yok, kütleler birbirine akar.
+	_body.material_override = WatercolorMaterials.flood_water() if kind == Kind.FLOOD else WatercolorMaterials.vertex_colored(true)
 	_pivot.add_child(_body)
 	if not eye_kit.is_empty():
 		var eyes := MeshInstance3D.new()
@@ -217,10 +218,19 @@ func _build_rodent(kit: MeshKit, ek: MeshKit) -> void:
 		for fz: float in [-0.75, 0.55]:
 			kit.cylinder(Vector3(sx * r * 0.32, r * 0.25, fz * r), r * 0.06, r * 0.08, r * 0.5, fur_dark, Vector3(0.2, 0, 0), 6)
 			kit.box(Vector3(sx * r * 0.32, r * 0.03, fz * r - r * 0.08), Vector3(r * 0.16, r * 0.05, r * 0.2), Color(0.25, 0.2, 0.18))
-	# Kızgın kehribar gözler, çatık kaş
+	# Büyük, pörtlek, kanlanmış gözler: beyazında kırmızı damarlar, ortada küçük kızıl bebek.
 	for sx: float in [-1.0, 1.0]:
-		ek.sphere(Vector3(sx * r * 0.2, r * 0.86, -r * 1.35), r * 0.11, Color(1.0, 0.55, 0.1), Vector3(1.0, 0.7, 1.0), 8)
-		ek.box(Vector3(sx * r * 0.2, r * 0.98, -r * 1.36), Vector3(r * 0.2, r * 0.05, r * 0.05), Color(0.15, 0.1, 0.08), Vector3(0, 0, sx * 0.5))
+		var c := Vector3(sx * r * 0.24, r * 0.92, -r * 1.32)
+		ek.sphere(c + Vector3(0, 0, r * 0.06), r * 0.225, Color(0.55, 0.2, 0.18), Vector3(1.0, 1.0, 0.8), 10)  # kızarık göz kapağı
+		ek.sphere(c, r * 0.21, Color(0.97, 0.93, 0.88), Vector3(1.0, 1.0, 0.9), 12)
+		var front := c + Vector3(0, 0, -r * 0.18)
+		for v in 5:
+			var a := TAU * v / 5.0 + 0.3
+			var d := Vector3(cos(a), sin(a), 0) * r * 0.12
+			ek.box(front + d + Vector3(0, 0, r * 0.03), Vector3(r * 0.09, r * 0.012, r * 0.015), Color(0.78, 0.22, 0.2), Vector3(0, 0, a))
+		ek.sphere(front + Vector3(sx * -r * 0.02, -r * 0.01, -r * 0.01), r * 0.065, Color(0.35, 0.06, 0.04), Vector3(1.0, 1.0, 0.5), 8)
+		ek.sphere(front + Vector3(sx * -r * 0.02, -r * 0.01, -r * 0.04), r * 0.04, Color(0.03, 0.02, 0.02), Vector3(1.0, 1.0, 0.5), 6)
+		ek.box(c + Vector3(0, r * 0.2, -r * 0.08), Vector3(r * 0.32, r * 0.06, r * 0.08), Color(0.15, 0.1, 0.08), Vector3(0, 0, sx * 0.45))
 	_tail = Node3D.new()
 	_tail.position = Vector3(0, r * 0.55, r * 1.3)
 	_pivot.add_child(_tail)
@@ -270,33 +280,68 @@ func _build_spirit(kit: MeshKit, ek: MeshKit) -> void:
 		ek.sphere(Vector3(sx * r * 0.15, r * 2.22, -r * 0.52), r * 0.055, Color(0.85, 1.0, 0.7), Vector3.ONE, 6)
 
 
-## Sel suyu: çamurlu, öne doğru kıvrılan bir dalga duvarı. Gözü yok; tepesi sivri köpük
-## dişleriyle bir ağız gibi açılır, içinde koparıp sürüklediği kütükler ve taşlar döner.
-func _build_flood(kit: MeshKit, ek: MeshKit) -> void:
+## Sel suyu: dere boyunca yuvarlanarak gelen gerçek bir taşkın dalgası. Gövde tek parça,
+## pürüzsüz bir yüzey (_wave_mesh): arkada alçalan bulanık su, önde yükselip kıvrılan sırt,
+## sırttan dökülen köpük, altında karanlık oyuk ve tabanda kabaran köpük. Üstünde sıçrayan
+## damlalar ve sürüklediği kütük, dal, taş ve tahta parçası var.
+func _build_flood(_kit: MeshKit, ek: MeshKit) -> void:
 	var r := size
-	var deep := FLOOD_WATER.darkened(0.35).lerp(Palette.EARTH, 0.25)
-	var mid := FLOOD_WATER.darkened(0.1).lerp(Palette.EARTH, 0.15)
-	# Gövde: arkada yüksek, öne doğru kıvrılan dalga sırtı
-	kit.sphere(Vector3(0, r * 0.35, r * 0.4), r * 1.3, deep, Vector3(1.6, 0.5, 1.1), 14)
-	kit.sphere(Vector3(0, r * 0.95, r * 0.1), r, mid, Vector3(1.55, 0.9, 0.8), 12)
-	kit.sphere(Vector3(0, r * 1.55, -r * 0.35), r * 0.62, mid.lightened(0.08), Vector3(2.3, 0.55, 0.9), 12)  # kıvrılan tepe
-	# Dalganın altındaki karanlık oyuk (ağız)
-	kit.sphere(Vector3(0, r * 0.85, -r * 0.62), r * 0.55, Color(0.06, 0.1, 0.12), Vector3(2.0, 0.7, 0.4), 10)
-	# Tepeden aşağı sarkan sivri köpük dişleri
-	for i in 9:
-		var x := (i - 4) * r * 0.34
-		var h := r * (0.42 + 0.18 * absf(sin(i * 1.3)))
-		kit.prism(Vector3(x, r * 1.2, -r * 0.82), Vector3(r * 0.2, h, r * 0.14), FLOOD_FOAM, Vector3(PI, 0, 0))
-	# Üstte savrulan köpük sivrileri
-	for i in 7:
-		var x := (i - 3) * r * 0.45
-		kit.prism(Vector3(x, r * 2.0, -r * 0.4 + absf(i - 3) * r * 0.08), Vector3(r * 0.22, r * 0.45, r * 0.16), FLOOD_FOAM, Vector3(-0.6, 0, (i - 3) * 0.15))
-	# Sürüklenen kütükler ve taşlar
-	kit.cylinder(Vector3(-r * 0.9, r * 1.25, -r * 0.1), r * 0.12, r * 0.14, r * 1.4, Palette.WOOD_DARK, Vector3(0.3, 0, 1.1), 7)
-	kit.cylinder(Vector3(r * 0.95, r * 0.7, -r * 0.45), r * 0.1, r * 0.12, r * 1.1, Palette.WOOD, Vector3(-0.5, 0.4, -0.9), 7)
-	kit.sphere(Vector3(r * 0.4, r * 1.65, -r * 0.2), r * 0.18, Palette.STONE_DARK, Vector3(1.2, 0.9, 1.0), 6)
-	kit.sphere(Vector3(-r * 0.3, r * 0.45, -r * 0.7), r * 0.2, Palette.STONE_DARK, Vector3(1.0, 0.8, 1.2), 6)
-	kit.box(Vector3(r * 1.25, r * 1.4, 0), Vector3(r * 0.5, r * 0.08, r * 0.12), Palette.WOOD_OLD, Vector3(0, 0.5, 0.7))  # kırık tahta
+	# Havaya sıçrayan damlalar
+	for i in 10:
+		var t := float(i)
+		ek.sphere(Vector3(sin(t * 1.9) * r * 1.4, r * (1.75 + 0.3 * absf(sin(t))), -r * (0.8 + 0.25 * cos(t * 1.3))), r * 0.05, FLOOD_FOAM, Vector3.ONE, 5)
+	# Sürüklenen kütük, yapraklı dal, taş ve kırık tahta
+	ek.cylinder(Vector3(-r * 0.5, r * 1.05, r * 0.5), r * 0.11, r * 0.13, r * 1.5, Palette.WOOD_DARK, Vector3(0.0, 0.6, PI * 0.5), 7)
+	ek.cylinder(Vector3(r * 0.95, r * 0.95, r * 0.9), r * 0.03, r * 0.05, r * 1.0, Palette.WOOD, Vector3(-0.9, 0.4, -0.6), 5)
+	for i in 3:
+		ek.sphere(Vector3(r * (1.0 + i * 0.12), r * (1.2 + i * 0.1), r * (0.6 - i * 0.15)), r * 0.12, Color(0.35, 0.5, 0.22), Vector3(1.2, 0.5, 0.8), 6)
+	ek.sphere(Vector3(r * 0.3, r * 0.85, r * 1.6), r * 0.14, Palette.STONE_DARK, Vector3(1.2, 0.8, 1.0), 6)
+	ek.box(Vector3(-r * 1.1, r * 0.8, r * 1.9), Vector3(r * 0.6, r * 0.07, r * 0.16), Palette.WOOD_OLD, Vector3(0.1, 0.7, 0.2))
+
+
+## Dalga kesiti (z, y) ve her noktanın rengi; enine (x) uzatılıp tek bir yüzey yapılır.
+const WAVE_PROFILE := [
+	[2.9, -0.05, 0], [2.1, 0.22, 0], [1.3, 0.52, 1], [0.6, 0.9, 1], [0.05, 1.25, 2], [-0.35, 1.47, 2],
+	[-0.62, 1.47, 2], [-0.84, 1.3, 3], [-0.9, 1.08, 3], [-0.76, 0.94, 4], [-0.68, 0.72, 4],
+	[-0.74, 0.42, 1], [-0.9, 0.16, 1], [-1.15, -0.05, 3]]
+
+
+static func _wave_mesh(r: float) -> ArrayMesh:
+	var cols := [Color(0.34, 0.26, 0.17), Color(0.47, 0.36, 0.23), Color(0.57, 0.50, 0.37),
+		FLOOD_FOAM.lerp(Color(0.88, 0.84, 0.74), 0.3), Color(0.20, 0.15, 0.11)]
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var nx := 26
+	var half := r * 2.0
+	var rows := WAVE_PROFILE.size()
+	for ix in nx + 1:
+		var u := float(ix) / nx
+		var x := lerpf(-half, half, u)
+		var e := absf(u * 2.0 - 1.0)
+		# Kenarlara doğru alçalır, ortada düzensiz tepecikler
+		var h := (1.0 - pow(e, 2.4)) * (0.92 + 0.1 * sin(x / r * 4.1) + 0.05 * sin(x / r * 9.3))
+		var lean := 0.12 * sin(x / r * 2.3)
+		for iy in rows:
+			var p: Array = WAVE_PROFILE[iy]
+			var z: float = p[0] * r + lean * r * clampf(p[1], 0.0, 1.5)
+			var y: float = maxf(p[1] * r * h, -0.05 * r) + 0.03 * r * sin(x / r * 7.0 + iy)
+			var c: Color = cols[p[2]]
+			if e > 0.8 and p[2] == 3:
+				c = c.lerp(cols[1], (e - 0.8) * 4.0)
+			st.set_color(c)
+			st.add_vertex(Vector3(x, y, z * (0.75 + 0.25 * h)))
+	for ix in nx:
+		for iy in rows - 1:
+			var a := ix * rows + iy
+			var b := (ix + 1) * rows + iy
+			st.add_index(a)
+			st.add_index(b)
+			st.add_index(a + 1)
+			st.add_index(a + 1)
+			st.add_index(b)
+			st.add_index(b + 1)
+	st.generate_normals()
+	return st.commit()
 
 
 # --- Davranış ----------------------------------------------------------------------------

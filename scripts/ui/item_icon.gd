@@ -248,7 +248,12 @@ func _rodent(c: Vector2, k: float, _ink: Color, a: float) -> void:
 	for i in 4:
 		var x := -4.0 + i * 5.0
 		draw_colored_polygon(PackedVector2Array([c + Vector2(x - 3, -3) * k, c + Vector2(x, -13 + absf(i - 1.5) * 2) * k, c + Vector2(x + 3, -3) * k]), Color(0.14, 0.12, 0.11, a))
-	draw_circle(c + Vector2(-12, 0) * k, 2.2 * k, Color(1.0, 0.55, 0.1, a))
+	draw_circle(c + Vector2(-12, 0) * k, 4.2 * k, Color(0.62, 0.16, 0.14, a))
+	draw_circle(c + Vector2(-12, 0) * k, 3.5 * k, Color(0.97, 0.93, 0.88, a))
+	for v in 4:
+		var ang := TAU * v / 4.0 + 0.4
+		draw_line(c + Vector2(-12, 0) * k + Vector2(cos(ang), sin(ang)) * 1.2 * k, c + Vector2(-12, 0) * k + Vector2(cos(ang), sin(ang)) * 3.3 * k, Color(0.85, 0.08, 0.08, a), 0.8 * k)
+	draw_circle(c + Vector2(-12.5, 0) * k, 1.3 * k, Color(0.55, 0.08, 0.05, a))
 	draw_rect(Rect2(c + Vector2(-20, 5) * k, Vector2(2, 4) * k), Color(0.93, 0.84, 0.55, a))
 
 
@@ -266,17 +271,18 @@ func _spirit(c: Vector2, k: float, _ink: Color, a: float) -> void:
 	draw_rect(Rect2(c + Vector2(-3, 7) * k, Vector2(6, 2) * k), Color(0.06, 0.05, 0.04, a))
 
 
-## Sel suyu: çamurlu dalga ağzı, köpük dişleri.
+## Sel suyu: çamurlu, köpüklü taşkın dalgası ve sürüklenen kütük.
 func _flood(c: Vector2, k: float, _ink: Color, a: float) -> void:
-	var water := Color(ValleyEnemy.FLOOD_WATER.darkened(0.2), a)
-	_blob_ellipse(c + Vector2(0, 2) * k, Vector2(20, 14) * k, water)
-	_blob_ellipse(c + Vector2(0, 5) * k, Vector2(13, 6) * k, Color(0.06, 0.1, 0.12, a))
-	for i in 6:
-		var x := -11.0 + i * 4.4
-		draw_colored_polygon(PackedVector2Array([c + Vector2(x - 2, -1) * k, c + Vector2(x, 6) * k, c + Vector2(x + 2, -1) * k]), Color(ValleyEnemy.FLOOD_FOAM, a))
-	for i in 5:
-		var x := -12.0 + i * 6.0
-		draw_colored_polygon(PackedVector2Array([c + Vector2(x - 3, -9) * k, c + Vector2(x + 1, -19) * k, c + Vector2(x + 3, -9) * k]), Color(ValleyEnemy.FLOOD_FOAM, a))
+	var mud := Color(0.42, 0.32, 0.22, a)
+	_blob_ellipse(c + Vector2(0, 8) * k, Vector2(21, 9) * k, Color(0.30, 0.23, 0.17, a))
+	_blob_ellipse(c + Vector2(-6, 2) * k, Vector2(11, 8) * k, mud)
+	_blob_ellipse(c + Vector2(7, 3) * k, Vector2(11, 7) * k, Color(0.55, 0.45, 0.33, a))
+	for i in 7:
+		var x := -15.0 + i * 5.0
+		draw_circle(c + Vector2(x, -4 + sin(i * 2.1) * 2.5) * k, (2.6 + absf(sin(i * 1.3))) * k, Color(ValleyEnemy.FLOOD_FOAM, a))
+	for i in 4:
+		draw_circle(c + Vector2(-10 + i * 7, -13 - (i % 2) * 3) * k, 1.1 * k, Color(ValleyEnemy.FLOOD_FOAM, a))
+	draw_line(c + Vector2(-14, 9) * k, c + Vector2(4, 4) * k, Color(Palette.WOOD_DARK, a), 3.0 * k)
 
 
 func _blob_ellipse(c: Vector2, r: Vector2, col: Color) -> void:
