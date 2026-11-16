@@ -15,6 +15,7 @@ var KINDS := {
 	"copper":  [[Palette.COPPER, Palette.SUNSET, Palette.COPPER_PATINA], 11, 3.6, 9.0, 0.09, 0.6, false],
 	"iron":    [[Palette.IRON, Palette.STONE_DARK, Palette.SUNSET], 11, 3.6, 9.0, 0.09, 0.6, false],
 	"clay":    [[Palette.CLAY, Palette.EARTH, Palette.SUNSET_LIGHT], 8, 2.0, 6.0, 0.12, 0.7, false],
+	"ink":     [[Color(0.10, 0.14, 0.18), Color(0.22, 0.34, 0.40), Color(0.16, 0.24, 0.30)], 14, 3.4, 7.5, 0.14, 0.75, false],
 	"sparkle": [[Palette.SUNSET_LIGHT, Color(1.0, 0.95, 0.7), Palette.PAPER], 14, 2.6, -0.8, 0.12, 0.9, false],
 }
 

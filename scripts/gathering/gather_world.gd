@@ -99,6 +99,35 @@ func _on_planted(seed_id: String, pos: Vector3) -> void:
 	AudioManager.play_sfx_3d("sapling_plant", pos)
 
 
+# --- İki kişilik: 2. oyuncunun vuruş geri bildirimi ve odak ışığı ---------------------------
+var _extra_highlights := {}
+
+
+func add_player(p: Player) -> void:
+	var h := FocusHighlight.new()
+	h.name = "Highlight%d" % p.index
+	add_child(h)
+	_extra_highlights[p] = h
+	p.focus_changed.connect(h.set_target)
+	p.gather.hit_landed.connect(_on_hit_by.bind(p))
+
+
+func remove_player(p: Player) -> void:
+	var h: FocusHighlight = _extra_highlights.get(p)
+	if h != null:
+		h.queue_free()
+	_extra_highlights.erase(p)
+
+
+func _on_hit_by(g: Gatherable, sweet: bool, p: Player) -> void:
+	var dir := (p.global_position - g.fx_point())
+	dir.y = 0.0
+	fx.hit(g.fx_kind(), g.fx_point(), dir.normalized(), sweet)
+	AudioManager.play_sfx_3d(g.sfx_hit(), g.fx_point())
+	if sweet:
+		AudioManager.play_sfx("sweet_hit", -2.0)
+
+
 # --- Kayıt -----------------------------------------------------------------------
 func save_state(data: Dictionary) -> void:
 	var res := {}

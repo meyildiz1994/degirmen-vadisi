@@ -6,6 +6,7 @@ signal quality_changed(level: int)
 signal quest_changed(quest_key: String)
 signal locale_changed(locale: String)
 signal rhythm_changed(enabled: bool)
+signal enemies_changed(enabled: bool)
 
 enum Quality { LOW, MEDIUM, HIGH }
 const QUALITY_KEYS := ["QUALITY_LOW", "QUALITY_MEDIUM", "QUALITY_HIGH"]
@@ -19,6 +20,8 @@ var inventory := Inventory.new()
 ## Kapalıyken basılı tutmak yeterli.
 var rhythm_hits := true
 var tutorial_step := 0
+## Mürekkep lekesi dalgaları. Kapatılırsa vadi tamamen sakin kalır.
+var enemies_enabled := true
 
 
 func _ready() -> void:
@@ -33,6 +36,11 @@ func _ready() -> void:
 func set_rhythm_hits(enabled: bool) -> void:
 	rhythm_hits = enabled
 	rhythm_changed.emit(enabled)
+
+
+func set_enemies_enabled(enabled: bool) -> void:
+	enemies_enabled = enabled
+	enemies_changed.emit(enabled)
 
 
 func save_state(data: Dictionary) -> void:

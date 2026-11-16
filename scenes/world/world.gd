@@ -20,6 +20,9 @@ const PLAYER_SPAWN := Vector2(-9.5, 9.5)
 var gather_world: GatherWorld
 var tutorial: Tutorial
 var finale: Finale
+var director: EnemyDirector
+var coop: CoopManager
+var _broke_note := -99999
 
 
 func _ready() -> void:
@@ -43,6 +46,7 @@ func _ready() -> void:
 	finale.name = "Finale"
 	add_child(finale)
 	finale.setup(mill, player, hud, $Atmosphere)
+	_build_combat()
 	SaveSystem.restore_persisted_nodes()
 	bridge.player = player
 	bridge.open_requested.connect(hud.open_repair)
@@ -57,6 +61,55 @@ func _ready() -> void:
 	AudioManager.play_music("music_explore")
 	if ScreenshotCapture.requested():
 		add_child(ScreenshotCapture.new())
+
+
+## Mürekkep lekeleri (dalga yöneticisi) ve iki kişilik oyun.
+func _build_combat() -> void:
+	player.respawn_point = _ground(WORKSHOP_POS.x + 2.4, WORKSHOP_POS.y + 2.2) + Vector3(0, 0.3, 0)
+	var sites: Array = [bridge, mill.wall, mill.wheel]
+	director = EnemyDirector.new()
+	director.name = "Enemies"
+	add_child(director)
+	director.setup(sites, gather_world.fx, finale, $Atmosphere)
+	hud.combat.bind_director(director, sites)
+	director.wave_warning.connect(_on_wave_warning)
+	director.wave_cleared.connect(func(_w): hud.show_toast("MSG_WAVE_CLEARED", 3.5); AudioManager.play_sfx("wave_cleared"))
+	director.part_broken.connect(_on_part_broken)
+	coop = CoopManager.new()
+	coop.name = "Coop"
+	add_child(coop)
+	coop.setup(self, player, hud, gather_world)
+	hud.bind_coop(coop)
+	coop.joined.connect(func(p2: Player): hud.show_toast("MSG_COOP_JOINED", 3.0); _watch_player(p2))
+	_watch_player(player)
+
+
+func _watch_player(p: Player) -> void:
+	p.downed_changed.connect(func(d: bool):
+		if d:
+			AudioManager.play_sfx("player_downed")
+			hud.show_toast("MSG_DOWNED" if coop.is_active() else "MSG_DOWNED_SOLO", 4.0)
+		else:
+			AudioManager.play_sfx("player_revived"))
+
+
+func _on_wave_warning(wave_no: int, _dir: Vector3) -> void:
+	AudioManager.play_sfx("wave_warning")
+	if wave_no == 1:
+		# İlk karşılaşma: metinsiz kart (leke → yapı, alet → leke) ve kısa açıklama.
+		hud.show_toast("MSG_FIRST_WAVE", 7.0)
+		hud.hint_card.flash(["ink_blot", "arrow", "bridge", "axe", "arrow", "ink_blot"], 9.0)
+	else:
+		hud.show_toast("MSG_WAVE_WARNING", 3.0)
+		hud.hint_card.flash(["ink_blot", "arrow", "bridge"], 4.0)
+
+
+func _on_part_broken(_site: RepairSite, _slot_id: String) -> void:
+	var now := Time.get_ticks_msec()
+	if now - _broke_note > 6000:
+		_broke_note = now
+		hud.show_toast("MSG_INK_BROKE", 4.0)
+		hud.hint_card.flash(["ink_blot", "arrow", "crack", "arrow", "workshop"], 4.0)
 
 
 ## Toplama: kaynaklar + geri bildirim + kayıt (GatherWorld), heybe bildirimleri, eğitim.

@@ -42,6 +42,16 @@
 		{"id": "panel_close",    "type": "ui",  "duration": 0.6, "variations": 3, "prompt": "closing a paper panel, soft paper fold"},
 		{"id": "inventory_open", "type": "ui",  "duration": 0.7, "variations": 3, "prompt": "opening a small leather satchel, soft buckle and cloth rustle"},
 
+		{"id": "ink_spawn",     "type": "sfx", "duration": 1.2, "variations": 2, "prompt": "wet ink bubbling up from the ground, soft gloopy blorp, cartoonish, gentle"},
+		{"id": "ink_hit",       "type": "sfx", "duration": 0.5, "variations": 3, "prompt": "tool slapping into a blob of wet ink, squelchy splat, cartoonish, not violent"},
+		{"id": "ink_pop",       "type": "sfx", "duration": 0.8, "variations": 3, "prompt": "ink blob bursting into droplets, wet pop and splash, playful cartoon"},
+		{"id": "ink_gnaw",      "type": "sfx", "duration": 1.0, "variations": 2, "prompt": "small creature nibbling and dissolving wood, wet fizzing chew, soft"},
+		{"id": "wave_warning",  "type": "sfx", "duration": 2.5, "variations": 1, "prompt": "distant low wooden horn and wind gust, ominous but cozy, short"},
+		{"id": "wave_cleared",  "type": "sfx", "duration": 2.0, "variations": 1, "prompt": "gentle bright chime and birds returning, relief, cozy"},
+		{"id": "player_hurt",   "type": "sfx", "duration": 0.5, "variations": 3, "prompt": "soft cartoon bonk and short grunt, gentle, no pain"},
+		{"id": "player_downed", "type": "sfx", "duration": 1.2, "variations": 1, "prompt": "dizzy cartoon wobble with little twinkling stars, playful"},
+		{"id": "player_revived", "type": "sfx", "duration": 1.0, "variations": 1, "prompt": "warm uplifting whoosh and tiny sparkle, helping friend up"},
+		{"id": "coop_join",     "type": "sfx", "duration": 1.0, "variations": 1, "prompt": "cheerful short two-note pluck, a friend joins"},
 		{"id": "music_explore",  "type": "music", "loop": true, "duration": 150, "variations": 1, "prompt": "cozy exploration theme for a peaceful valley game, acoustic guitar and soft piano, slow tempo, warm and calm, instrumental, loopable"},
 		{"id": "music_workshop", "type": "music", "loop": true, "duration": 120, "variations": 1, "prompt": "calm workshop theme, kalimba and soft strings, gentle and focused, instrumental, loopable"},
 		{"id": "music_finale",   "type": "music", "loop": false, "duration": 120, "variations": 1, "prompt": "warm emotional finale as an old water mill turns again, acoustic guitar, piano and strings building to a heartfelt gentle climax, instrumental"}

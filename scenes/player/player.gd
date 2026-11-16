@@ -5,6 +5,18 @@ extends CharacterBody3D
 
 signal focus_changed(target: Interactable)
 signal interacted_with(target: Interactable)
+signal health_changed(health: int)
+signal downed_changed(downed: bool)
+signal attacked(target: Node3D)
+
+const MAX_HEALTH := 5
+const DOWNED_SECONDS := 9.0       ## yalnızken bu kadar sonra atölyede kendine gelir
+const REVIVE_SECONDS := 2.2       ## arkadaş yanında durursa kalkış süresi
+const REVIVE_RANGE := 2.4
+const REGEN_DELAY := 6.0
+const REGEN_EVERY := 3.5
+const LEASH := 15.0               ## iki kişilikte oyuncular en fazla bu kadar uzaklaşır
+const HAND_DAMAGE := 1.0
 
 @export var walk_speed := 4.3
 @export var acceleration := 11.0
@@ -30,10 +42,32 @@ var input_enabled := true
 var gather: GatherController
 var _walk_phase := 0.0
 var _face_target := Vector3.INF
+## Girişin kaynağı (1. oyuncu: tüm yerel cihazlar, 2. oyuncu: kendi gamepad'i).
+var pinput := PlayerInput.new()
+## 0: ana oyuncu (kamera, kayıt), 1: 2. oyuncu.
+var index := 0
+## İki kişilikte diğer oyuncu (kamera ikisini kadrajlar, ip mesafesi).
+var partner: Player = null
+## 2. oyuncu kamerayı 1. oyuncudan paylaşır.
+var camera_owner: Player = null
+var respawn_point := Vector3.INF
+var health := MAX_HEALTH
+var downed := false
+var revive := 0.0                 ## 0..1 arkadaşın kaldırma ilerlemesi
+var _downed_t := 0.0
+var _since_hurt := 99.0
+var _regen_t := 0.0
+var _attack_cd := 0.0
+var _knock := Vector3.ZERO
+var _invuln := 0.0
 
 
 func _ready() -> void:
-	add_to_group(SaveSystem.PERSIST_GROUP)
+	add_to_group(&"players")
+	if index == 0:
+		add_to_group(SaveSystem.PERSIST_GROUP)
+	else:
+		camera.current = false
 	camera_rig.top_level = true
 	camera_rig.global_position = global_position + Vector3(0, 1.45, 0)
 	spring_arm.add_excluded_object(get_rid())
@@ -49,18 +83,28 @@ func _physics_process(delta: float) -> void:
 	_update_camera_input(delta)
 	_update_movement(delta)
 	_update_focus()
+	_update_combat(delta)
 
 
 func _process(delta: float) -> void:
 	var target := global_position + Vector3(0, 1.45, 0)
+	var arm := 4.3
+	if partner != null and index == 0:
+		# İki kişilik: kamera ikisinin ortasına bakar, aradaki mesafe büyüdükçe geri çekilir.
+		target = (global_position + partner.global_position) * 0.5 + Vector3(0, 1.45, 0)
+		arm = clampf(4.3 + global_position.distance_to(partner.global_position) * 0.55, 4.3, 12.0)
+	spring_arm.spring_length = lerpf(spring_arm.spring_length, arm, clampf(delta * 3.0, 0.0, 1.0))
 	camera_rig.global_position = camera_rig.global_position.lerp(target, clampf(delta * camera_follow_speed, 0.0, 1.0))
 	_animate(delta)
 
 
 func _update_camera_input(delta: float) -> void:
+	if camera_owner != null:
+		yaw = camera_owner.yaw  # hareket yönü ortak kameraya göre
+		return
 	if not input_enabled:
 		return
-	var look := InputManager.consume_look(delta)
+	var look := pinput.consume_look(delta)
 	yaw -= look.x
 	pitch = clampf(pitch - look.y, pitch_min, pitch_max)
 	camera_rig.rotation = Vector3(0, yaw, 0)
@@ -68,11 +112,18 @@ func _update_camera_input(delta: float) -> void:
 
 
 func _update_movement(delta: float) -> void:
-	var input := InputManager.get_move_vector() if input_enabled else Vector2.ZERO
+	var input := pinput.move_vector() if input_enabled and not downed else Vector2.ZERO
 	var dir := Basis(Vector3.UP, yaw) * Vector3(input.x, 0, input.y)
 	if dir.length() > 1.0:
 		dir = dir.normalized()
-	var target := dir * walk_speed
+	if partner != null and not partner.downed:
+		# İp: arkadaştan fazla uzaklaşan yön kesilir (ikisi de ekranda kalsın).
+		var away := global_position - partner.global_position
+		away.y = 0.0
+		if away.length() > LEASH and dir.dot(away) > 0.0:
+			dir -= away.normalized() * dir.dot(away.normalized())
+	var target := dir * walk_speed + _knock
+	_knock = _knock.move_toward(Vector3.ZERO, delta * 14.0)
 	var hv := Vector3(velocity.x, 0, velocity.z)
 	var rate := acceleration if target.length() > hv.length() else deceleration
 	hv = hv.move_toward(target, rate * delta * walk_speed)
@@ -104,6 +155,7 @@ func _animate(delta: float) -> void:
 		model.end_session()
 	_update_held()
 	_update_impact_shake(delta)
+	model.rotation.x = lerpf(model.rotation.x, -1.3 if downed else 0.0, clampf(delta * 8.0, 0.0, 1.0))
 	var bob := sin(_walk_phase * 2.0) * 0.045 * clampf(speed / walk_speed, 0.0, 1.0)
 	model.position.y = bob
 	model.rotation.z = sin(_walk_phase) * 0.04 * clampf(speed / walk_speed, 0.0, 1.0)
@@ -128,7 +180,12 @@ func _update_focus() -> void:
 		if d < it.radius and d + it.focus_bias < best_d:
 			best = it
 			best_d = d + it.focus_bias
-	hovered = _hovered_target() if InputManager.is_pointer_mode() and input_enabled else null
+	if downed:
+		if focus != null:
+			focus = null
+			focus_changed.emit(null)
+		return
+	hovered = _hovered_target() if pinput.is_pointer_mode() and input_enabled else null
 	if hovered != null:
 		best = hovered
 	if best != focus:
@@ -160,10 +217,10 @@ func _hovered_target() -> Interactable:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not input_enabled:
+	if not input_enabled or downed:
 		return
-	var click := InputManager.is_click_interact(event)
-	if not event.is_action_pressed("interact") and not click:
+	var click := pinput.is_click_interact(event)
+	if not pinput.is_interact_event(event) and not click:
 		return
 	# Fareyle: oturum sürerken her tık vuruştur; yoksa yalnızca imlecin altındaki hedef.
 	var target := focus
@@ -171,7 +228,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		if hovered == null:
 			return
 		target = hovered
-	if gather.active():
+	if target is InkBlot and not gather.active():
+		try_attack(target as InkBlot)
+	elif gather.active():
 		gather.on_interact_pressed(gather.target)
 	elif target is Gatherable:
 		gather.on_interact_pressed(target as Gatherable)
@@ -190,6 +249,8 @@ func _update_held() -> void:
 	var t: ToolItem = null
 	if gather.active():
 		t = gather.tool
+	elif focus is InkBlot:
+		t = best_weapon()
 	elif focus is Gatherable and not (focus as Gatherable).is_hand():
 		var g := focus as Gatherable
 		t = GameState.inventory.best_tool(g.tool_kind(), g.resource_id)
@@ -254,12 +315,127 @@ func surface_under() -> String:
 	return "grass"
 
 
+# --- Mücadele: vuruş, can, sersemleme ------------------------------------------------------
+## En güçlü alet silah olur (balta ya da kazma); alet yoksa yumrukla (zayıf).
+func best_weapon() -> ToolItem:
+	var best: ToolItem = null
+	for t: ToolItem in GameState.inventory.tools:
+		if best == null or t.effective_power() > best.effective_power():
+			best = t
+	return best
+
+
+static func weapon_damage(t: ToolItem) -> float:
+	return HAND_DAMAGE if t == null else 1.0 + t.effective_power() * 0.25
+
+
+func try_attack(blot: InkBlot) -> bool:
+	if _attack_cd > 0.0 or downed or not is_instance_valid(blot) or not blot.alive():
+		return false
+	var t := best_weapon()
+	_attack_cd = (t.swing_time() if t != null else 0.42) + 0.1
+	face_towards(blot.global_position)
+	play_swing(false)
+	if t != null:
+		t.wear(1)
+		GameState.inventory.notify_tool_changed()
+	blot.take_hit(weapon_damage(t), self)
+	attacked.emit(blot)
+	return true
+
+
+func take_damage(amount: int, from: Vector3) -> void:
+	if downed or _invuln > 0.0 or amount <= 0:
+		return
+	health = maxi(health - amount, 0)
+	_since_hurt = 0.0
+	_invuln = 0.6
+	var away := global_position - from
+	away.y = 0.0
+	_knock = away.normalized() * 5.0 if away.length() > 0.01 else Vector3.ZERO
+	model.hurt()
+	AudioManager.play_sfx_3d("player_hurt", global_position)
+	if index == 0 or camera_owner == null:
+		_impact = 0.16
+	PlatformServices.vibrate(60)
+	gather.stop()
+	health_changed.emit(health)
+	if health <= 0:
+		_set_downed(true)
+
+
+func _set_downed(v: bool) -> void:
+	if downed == v:
+		return
+	downed = v
+	revive = 0.0
+	_downed_t = 0.0
+	if v:
+		gather.stop()
+	else:
+		health = MAX_HEALTH
+		_invuln = 2.0
+		health_changed.emit(health)
+	downed_changed.emit(v)
+
+
+func _update_combat(delta: float) -> void:
+	_attack_cd = maxf(_attack_cd - delta, 0.0)
+	_invuln = maxf(_invuln - delta, 0.0)
+	if downed:
+		_downed_t += delta
+		var helper := partner != null and not partner.downed \
+			and partner.global_position.distance_to(global_position) < REVIVE_RANGE
+		if helper:
+			revive = minf(revive + delta / REVIVE_SECONDS, 1.0)
+			if revive >= 1.0:
+				_set_downed(false)
+				health = 3
+				health_changed.emit(health)
+				return
+		else:
+			revive = maxf(revive - delta * 0.5, 0.0)
+		if _downed_t >= DOWNED_SECONDS:
+			_wake_at_home()
+		return
+	# Basılı tutunca leke dövülmeye devam eder (dokunmatikte rahat).
+	if focus is InkBlot and input_enabled and pinput.interact_held() and not gather.active():
+		try_attack(focus as InkBlot)
+	_since_hurt += delta
+	if health < MAX_HEALTH and _since_hurt > REGEN_DELAY:
+		_regen_t += delta
+		if _regen_t >= REGEN_EVERY:
+			_regen_t = 0.0
+			health += 1
+			health_changed.emit(health)
+
+
+## Yalnız kalınca ya da kimse kaldırmazsa: atölyenin önünde kendine gelir.
+func _wake_at_home() -> void:
+	if respawn_point != Vector3.INF:
+		var off := Vector3(0.9 * index, 0, 0)
+		global_position = respawn_point + off
+		velocity = Vector3.ZERO
+		if index == 0:
+			camera_rig.global_position = global_position + Vector3(0, 1.45, 0)
+	_set_downed(false)
+
+
+func heal_full() -> void:
+	health = MAX_HEALTH
+	health_changed.emit(health)
+
+
 # --- Kayıt (SaveSystem 'persist' grubu) ------------------------------------------------
 func save_state(data: Dictionary) -> void:
+	if index != 0:
+		return
 	data["player"] = {"x": global_position.x, "y": global_position.y, "z": global_position.z, "yaw": yaw}
 
 
 func load_state(data: Dictionary) -> void:
+	if index != 0:
+		return
 	var p: Dictionary = data.get("player", {})
 	if p.has("x"):
 		global_position = Vector3(p.x, p.y + 0.2, p.z)

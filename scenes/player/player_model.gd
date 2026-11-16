@@ -42,6 +42,9 @@ var _squash := 1.0
 var _squash_v := 0.0
 var _crouch := 0.0
 var _crouch_v := 0.0
+## Kıyafet renkleri (2. oyuncu farklı renkte giyinir). _ready'den önce ayarlanır.
+var tunic := Palette.TUNIC
+var scarf := Palette.SCARF
 
 
 func _ready() -> void:
@@ -88,13 +91,13 @@ func _legs_mesh() -> ArrayMesh:
 
 func _body_mesh() -> ArrayMesh:
 	var kit := MeshKit.new()
-	kit.cylinder(Vector3(0, 0.88, 0), 0.22, 0.32, 0.72, Palette.TUNIC, Vector3.ZERO, 12)
+	kit.cylinder(Vector3(0, 0.88, 0), 0.22, 0.32, 0.72, tunic, Vector3.ZERO, 12)
 	kit.cylinder(Vector3(0, 0.62, 0), 0.33, 0.33, 0.08, Palette.WOOD_DARK, Vector3.ZERO, 12)  # kemer
 	# Sol kol (sağ kol ayrı eklemde)
-	kit.cylinder(Vector3(-0.3, 0.9, 0), 0.07, 0.08, 0.55, Palette.TUNIC.lightened(0.1), Vector3(0, 0, -0.18), 8)
+	kit.cylinder(Vector3(-0.3, 0.9, 0), 0.07, 0.08, 0.55, tunic.lightened(0.1), Vector3(0, 0, -0.18), 8)
 	kit.sphere(Vector3(-0.35, 0.62, 0), 0.075, Palette.SKIN, Vector3.ONE, 8)
-	kit.cylinder(Vector3(0, 1.25, 0), 0.2, 0.24, 0.12, Palette.SCARF, Vector3.ZERO, 12)
-	kit.box(Vector3(0.12, 1.08, 0.2), Vector3(0.1, 0.3, 0.05), Palette.SCARF, Vector3(0.2, 0, 0.1))
+	kit.cylinder(Vector3(0, 1.25, 0), 0.2, 0.24, 0.12, scarf, Vector3.ZERO, 12)
+	kit.box(Vector3(0.12, 1.08, 0.2), Vector3(0.1, 0.3, 0.05), scarf, Vector3(0.2, 0, 0.1))
 	kit.sphere(Vector3(0, 1.48, 0), 0.2, Palette.SKIN, Vector3(1, 1.05, 1), 12)
 	kit.sphere(Vector3(0, 1.44, -0.19), 0.04, Palette.SKIN.darkened(0.08), Vector3.ONE, 6)  # burun
 	kit.cylinder(Vector3(0, 1.62, 0), 0.4, 0.42, 0.03, Palette.REED, Vector3.ZERO, 16)
@@ -106,7 +109,7 @@ func _body_mesh() -> ArrayMesh:
 
 func _arm_mesh() -> ArrayMesh:
 	var kit := MeshKit.new()
-	kit.cylinder(Vector3(0, -0.26, 0), 0.07, 0.08, 0.55, Palette.TUNIC.lightened(0.1), Vector3.ZERO, 8)
+	kit.cylinder(Vector3(0, -0.26, 0), 0.07, 0.08, 0.55, tunic.lightened(0.1), Vector3.ZERO, 8)
 	kit.sphere(Vector3(0, -0.54, 0), 0.075, Palette.SKIN, Vector3.ONE, 8)
 	return kit.commit()
 
@@ -176,6 +179,12 @@ func strike(sweet := false) -> void:
 
 func pickup() -> void:
 	_pickup_t = 0.0
+
+
+## Darbe aldı: geriye sendeler ve ezilir.
+func hurt() -> void:
+	_lean_v += 10.0
+	_squash_v -= 3.0
 
 
 func is_striking() -> bool:

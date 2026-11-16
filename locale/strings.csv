@@ -205,3 +205,17 @@ VOL_MUSIC,Müzik,Music
 VOL_SFX,Efektler,Effects
 VOL_AMBIENCE,Doğa sesleri,Ambience
 VOL_UI,Arayüz,Interface
+ACTION_HIT,Vur,Hit
+NAME_INK_BLOT,Mürekkep Lekesi,Ink Blot
+NAME_INK_BIG,Kara Leke,Big Blot
+ENEMIES,Mürekkep lekeleri,Ink blots
+COOP_JOIN,İki kişilik: 2. oyuncu katılsın,Two players: let player 2 join
+COOP_WAITING,2. oyuncu bekleniyor (gamepad'de A),Waiting for player 2 (A on a gamepad)
+COOP_LEAVE,2. oyuncu ayrılsın,Player 2 leaves
+MSG_FIRST_WAVE,"Ormandan mürekkep lekeleri sızıyor! Onardığın yerleri eritmeye çalışacaklar, aletinle vurup dağıt.","Ink blots are seeping out of the forest! They'll try to dissolve what you repaired: hit them with your tool."
+MSG_WAVE_WARNING,Mürekkep lekeleri geliyor!,Ink blots are coming!
+MSG_WAVE_CLEARED,Lekeler dağıldı. Vadi yine sakin.,The blots are gone. The valley is calm again.
+MSG_INK_BROKE,"Lekeler bir parçayı eritti: Onarım noktasından yenisini tak.",The blots dissolved a part: fit a new one at the repair point.
+MSG_DOWNED,Sersemledin! Arkadaşın yanına gelirse kalkarsın.,You're dazed! Your friend can help you up.
+MSG_DOWNED_SOLO,Sersemledin… Birazdan atölyenin önünde kendine geleceksin.,You're dazed… You'll come to by the workshop shortly.
+MSG_COOP_JOINED,2. oyuncu katıldı! Heybe ortak.,Player 2 joined! The bag is shared.

@@ -161,6 +161,7 @@ func _run() -> void:
 	await _test_bridge(world, player)
 	await _test_mouse(player)
 	await _test_polish(world, player)
+	await _test_combat(world, player)
 	# Ritim kapalı: basılı tutunca vurur
 	gs.set_rhythm_hits(false)
 	print("\nSonuç: %s (%d hata)" % ["BAŞARILI" if _fails == 0 else "BAŞARISIZ", _fails])
@@ -468,3 +469,104 @@ func _test_item_memory() -> void:
 	check(vs.sliders["Music"].custom_minimum_size.y >= 48.0, "ses çubuğu ≥48 px")
 	vs.sliders["Music"].value = 0.8
 	vs.queue_free()
+
+
+## Mürekkep lekeleri ve iki kişilik oyun.
+func _test_combat(world: Node, player: Player) -> void:
+	print("== mürekkep lekeleri")
+	var d: EnemyDirector = world.director
+	var c1 := EnemyDirector.composition(1, 1, 1)
+	var c5 := EnemyDirector.composition(5, 3, 1)
+	var c5co := EnemyDirector.composition(5, 3, 2)
+	check(c1["small"] == 2 and c1["big"] == 0, "ilk dalga küçük bir tanışma")
+	check(c5["small"] > c1["small"] and c5["big"] >= 1, "dalgalar büyür, Kara Leke gelir")
+	check(c5co["small"] > c5["small"] and c5co["big"] > c5["big"], "iki kişide daha kalabalık")
+	await _frames(3)
+	check(d.phase != EnemyDirector.Phase.DORMANT, "onarım sonrası dalga yöneticisi uyandı")
+	var bridge: RepairSite = world.bridge
+	var slot: String = bridge.damageable_slots()[0]
+	var hp := Repair.slot_max_hp("bridge", bridge.state, slot)
+	check(hp > 20.0, "takılı parçanın dayanıklılığı var (%.0f)" % hp)
+	# Dalgayı başlat
+	d.timer = 0.0
+	d.phase = EnemyDirector.Phase.CALM
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	check(d.phase == EnemyDirector.Phase.WARNING, "uyarı aşaması")
+	d.timer = 0.0
+	for i in 4:
+		await get_tree().physics_frame
+	check(d.phase == EnemyDirector.Phase.WAVE and d.blots.size() >= 1, "dalga başladı, leke sızdı")
+	var b: InkBlot = d.blots[0]
+	check(b.site != null and b.slot_id != "", "leke bir yapı ve parça seçti")
+	# Lekeyi yapıya taşı: parçayı aşındırsın
+	b.global_position = b.goal
+	b.state = InkBlot.State.GNAW
+	b.player_damage = 0
+	for i in 30:
+		await get_tree().physics_frame
+	check(b.site.slot_health(b.slot_id) < 1.0, "leke parçayı eritiyor")
+	var target_site := b.site
+	var target_slot := b.slot_id
+	var broke := target_site.damage_slot(target_slot, 9999.0)
+	check(broke and Repair.is_cracked(target_site.state, target_slot) and target_site.crack_cause == "ink", "eriyen parça çatladı")
+	check(not target_site.is_complete(), "yapı yeniden onarım bekliyor")
+	# Vuruş: alet hasarı, leke dağılır
+	player.input_enabled = true
+	b.global_position = player.global_position + Vector3(1.0, 0, 0)
+	var t := player.best_weapon()
+	check(t != null and Player.weapon_damage(t) > Player.HAND_DAMAGE, "alet yumruktan güçlü")
+	var hits := 0
+	while is_instance_valid(b) and b.alive() and hits < 20:
+		player._attack_cd = 0.0
+		player.try_attack(b)
+		hits += 1
+	check(hits <= 3 and not d.blots.has(b), "küçük leke birkaç vuruşta dağıldı (%d)" % hits)
+	print("== can ve sersemleme")
+	player._invuln = 0.0
+	player.take_damage(1, player.global_position + Vector3(1, 0, 0))
+	check(player.health == Player.MAX_HEALTH - 1, "darbe canı azaltır")
+	for i in Player.MAX_HEALTH:
+		player._invuln = 0.0
+		player.take_damage(1, player.global_position)
+	check(player.downed and player.health == 0, "can bitince sersemler")
+	print("== iki kişilik")
+	var coop: CoopManager = world.coop
+	var p2 := coop.join(0)
+	await _frames(2)
+	check(coop.is_active() and p2.index == 1 and p2.partner == player, "2. oyuncu katıldı")
+	check(world.hud.players.size() == 2, "arayüz iki oyuncuyu biliyor")
+	check(get_viewport().get_camera_3d() == player.camera, "ortak kamera 1. oyuncuda")
+	check(InputManager.p2_pad == 0, "gamepad 2. oyuncuya ayrıldı")
+	var ev := InputMap.action_get_events("interact")
+	var moved := true
+	for e in ev:
+		if e is InputEventJoypadButton and e.device == 0:
+			moved = false
+	check(moved, "1. oyuncunun aksiyonları 2. gamepad'i dinlemiyor")
+	p2.global_position = player.global_position + Vector3(0.8, 0, 0)
+	for i in 160:
+		await get_tree().physics_frame
+	check(not player.downed, "arkadaş yanında durunca kaldırdı")
+	check(p2.pinput.move_vector() == Vector2.ZERO, "2. oyuncunun girişi kendi gamepad'inden")
+	var data := {}
+	player.save_state(data)
+	p2.save_state(data)
+	check(data.has("player") and data["player"]["x"] == player.global_position.x, "kayıtta yalnızca 1. oyuncu")
+	coop.leave()
+	await _frames(2)
+	check(not coop.is_active() and InputManager.p2_pad == -1 and player.partner == null, "2. oyuncu ayrıldı")
+	var restored := false
+	for e in InputMap.action_get_events("interact"):
+		if e is InputEventJoypadButton and e.device == -1:
+			restored = true
+	check(restored, "gamepad yeniden 1. oyuncunun")
+	print("== ayar ve kayıt")
+	var sd := {}
+	d.save_state(sd)
+	check(sd["enemies"]["phase"] == EnemyDirector.Phase.CALM, "süren dalga sakin olarak kaydedilir")
+	gs.set_enemies_enabled(false)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	check(d.blots.is_empty() and d.phase != EnemyDirector.Phase.WAVE, "ayardan kapatınca lekeler gider (%d, %d, %s)" % [d.blots.size(), d.phase, get_tree().paused])
+	gs.set_enemies_enabled(true)

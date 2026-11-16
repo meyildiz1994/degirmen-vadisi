@@ -37,6 +37,13 @@ var repair_panel: RepairPanel
 var tool_belt: ToolBelt
 var quest_marker: QuestMarker
 var _hover_cursor := false
+## Sahnedeki oyuncular (iki kişilikte 2). Paneller açılınca hepsi durur.
+var players: Array[Player] = []
+var combat: CombatOverlay
+var coop: CoopManager
+var coop_button: Button
+var enemies_button: Button
+var _extra_rings := {}
 
 
 func _ready() -> void:
@@ -61,6 +68,7 @@ func _ready() -> void:
 	rhythm_button.pressed.connect(func(): AudioManager.play_ui("ui_click"); GameState.set_rhythm_hits(not GameState.rhythm_hits))
 	GameState.rhythm_changed.connect(func(_e): _refresh_buttons())
 	_build_gather_ui()
+	_build_combat_ui()
 	_build_settings_column()
 	_on_quest_changed(GameState.current_quest_key)
 	_refresh_buttons()
@@ -97,6 +105,9 @@ func _fit_pause_panel() -> void:
 
 func bind_player(p: Player) -> void:
 	player = p
+	players = [p]
+	combat.camera = p.camera
+	combat.players = players
 	tool_belt.player = p
 	quest_marker.player = p
 	p.focus_changed.connect(_on_focus_changed)
@@ -107,6 +118,85 @@ func bind_player(p: Player) -> void:
 	p.gather.hit_landed.connect(func(_g, _s): _refresh_hint.call_deferred())
 	p.gather.tool_missing.connect(_on_tool_missing)
 	p.gather.tool_named.connect(_on_tool_named)
+
+
+## Mücadele: dünyaya bağlı işaretler + duraklatma menüsünde iki kişilik ve düşman ayarı.
+func _build_combat_ui() -> void:
+	combat = CombatOverlay.new()
+	combat.name = "CombatOverlay"
+	root.add_child(combat)
+	root.move_child(combat, 0)
+	var vbox: VBoxContainer = pause_menu.get_node("Panel/VBox")
+	coop_button = Button.new()
+	coop_button.name = "CoopButton"
+	vbox.add_child(coop_button)
+	vbox.move_child(coop_button, rhythm_button.get_index() + 1)
+	coop_button.pressed.connect(_on_coop_pressed)
+	enemies_button = Button.new()
+	enemies_button.name = "EnemiesButton"
+	vbox.add_child(enemies_button)
+	vbox.move_child(enemies_button, coop_button.get_index() + 1)
+	enemies_button.pressed.connect(func(): AudioManager.play_ui("ui_click"); GameState.set_enemies_enabled(not GameState.enemies_enabled))
+	GameState.enemies_changed.connect(func(_e): _refresh_buttons())
+
+
+func bind_coop(c: CoopManager) -> void:
+	coop = c
+	c.waiting_changed.connect(_on_coop_waiting)
+	c.joined.connect(func(_p): _refresh_buttons(); hint_card.flash(["two_players", "check"], 2.5))
+	c.left.connect(_refresh_buttons)
+
+
+func _on_coop_pressed() -> void:
+	AudioManager.play_ui("ui_click")
+	if coop == null:
+		return
+	if coop.is_active():
+		coop.leave()
+		_refresh_buttons()
+		return
+	set_paused(false)
+	coop.start_waiting()
+
+
+## Katılma beklenirken metinsiz kart: [iki oyuncu] [gamepad A].
+func _on_coop_waiting(waiting: bool) -> void:
+	if waiting:
+		hint_card.flash(["two_players", "arrow", "pad_a"], CoopManager.WAIT_SECONDS)
+	else:
+		hint_card.flash([], 0.01)
+	_refresh_buttons()
+
+
+func add_player(p: Player) -> void:
+	players.append(p)
+	combat.players = players
+	var ring := RhythmRing.new()
+	ring.name = "RhythmRing%d" % p.index
+	add_child(ring)
+	move_child(ring, 1)
+	ring.bind(p.gather, player.camera)
+	_extra_rings[p] = ring
+	p.gather.tool_missing.connect(_on_tool_missing)
+	p.gather.tool_named.connect(_on_tool_named)
+	p.interacted_with.connect(_on_interacted)
+
+
+func remove_player(p: Player) -> void:
+	players.erase(p)
+	combat.players = players
+	var ring: Node = _extra_rings.get(p)
+	if ring != null:
+		ring.queue_free()
+	_extra_rings.erase(p)
+
+
+func _set_players_input(enabled: bool) -> void:
+	for p in players:
+		if is_instance_valid(p):
+			p.input_enabled = enabled
+			if not enabled:
+				p.gather.stop()
 
 
 ## Toplama arayüzü kodla kurulur: vuruş halkası, toplama kartları, metinsiz ipucu, heybe.
@@ -179,9 +269,7 @@ func _begin_modal() -> bool:
 		inventory_panel.close_panel()
 	AudioManager.play_ui("panel_open")
 	InputManager.release_mouse()
-	if player:
-		player.input_enabled = false
-		player.gather.stop()
+	_set_players_input(false)
 	hint_panel.visible = false
 	return true
 
@@ -214,16 +302,13 @@ func toggle_inventory() -> void:
 		return
 	AudioManager.play_ui("inventory_open")
 	InputManager.release_mouse()
-	if player:
-		player.input_enabled = false
-		player.gather.stop()
+	_set_players_input(false)
 	inventory_panel.open_panel()
 
 
 func _on_inventory_closed() -> void:
 	AudioManager.play_ui("panel_close")
-	if player:
-		player.input_enabled = true
+	_set_players_input(true)
 	_refresh_hint()
 
 
@@ -291,6 +376,15 @@ func _refresh_buttons() -> void:
 	language_button.text = "%s: %s" % [tr("LANGUAGE"), "Türkçe" if GameState.current_locale() == "tr" else "English"]
 	touch_button.text = tr("TOUCH_PREVIEW_ON") if InputManager.touch_preview else tr("TOUCH_PREVIEW_OFF")
 	rhythm_button.text = "%s: %s" % [tr("RHYTHM_HITS"), tr("ON") if GameState.rhythm_hits else tr("OFF")]
+	if enemies_button != null:
+		enemies_button.text = "%s: %s" % [tr("ENEMIES"), tr("ON") if GameState.enemies_enabled else tr("OFF")]
+	if coop_button != null:
+		if coop != null and coop.is_active():
+			coop_button.text = tr("COOP_LEAVE")
+		elif coop != null and coop.waiting:
+			coop_button.text = tr("COOP_WAITING")
+		else:
+			coop_button.text = tr("COOP_JOIN")
 
 
 func _on_interacted(target: Interactable) -> void:

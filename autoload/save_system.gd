@@ -37,6 +37,7 @@ func _default_data() -> Dictionary:
 			"locale": "tr" if lang == "tr" else "en",
 			"volume": {"Music": 0.8, "SFX": 0.9, "Ambience": 0.9, "UI": 0.8},
 			"rhythm_hits": true,
+			"enemies": true,
 		},
 		"player": {},
 		"inventory": {},
@@ -86,6 +87,7 @@ func save_game() -> void:
 	data["settings"]["quality"] = GameState.quality
 	data["settings"]["locale"] = GameState.current_locale()
 	data["settings"]["rhythm_hits"] = GameState.rhythm_hits
+	data["settings"]["enemies"] = GameState.enemies_enabled
 	if not persistent:
 		saved.emit()
 		return
@@ -112,6 +114,7 @@ func apply_settings() -> void:
 	GameState.set_locale(str(s.get("locale", "tr")))
 	GameState.set_quality(int(s.get("quality", GameState.quality)))
 	GameState.set_rhythm_hits(bool(s.get("rhythm_hits", true)))
+	GameState.set_enemies_enabled(bool(s.get("enemies", true)))
 	var vol: Dictionary = s.get("volume", {})
 	for bus in vol:
 		AudioManager.set_bus_volume(bus, float(vol[bus]))
